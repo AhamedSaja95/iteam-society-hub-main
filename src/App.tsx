@@ -58,12 +58,17 @@ const App = () => (
             {/* Protected Dashboard Routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<ModernDashboardLayout />}>
+                {/* Redirect root dashboard to role-specific dashboard */}
                 <Route index element={<Dashboard />} />
+
+                {/* Common dashboard pages */}
                 <Route path="profile" element={<Profile />} />
                 <Route path="events" element={<Events />} />
                 <Route path="membership" element={<Membership />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="achievements" element={<Achievements />} />
+
+                {/* Role-specific dashboards */}
                 <Route
                   path="modern-student"
                   element={<ModernStudentDashboard />}
@@ -78,7 +83,7 @@ const App = () => (
                   element={<RealTimeStaffDashboard />}
                 />
 
-                {/* Admin Routes - TEMPORARILY UNPROTECTED */}
+                {/* Admin Routes */}
                 <Route path="admin">
                   <Route index element={<AdminDashboard />} />
                   <Route path="modern" element={<ModernAdminDashboard />} />

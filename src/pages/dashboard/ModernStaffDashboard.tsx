@@ -26,6 +26,7 @@ import {
   Activity,
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 
 interface StaffStats {
   eventsCreated: number;
@@ -241,14 +242,7 @@ const ModernStaffDashboard = () => {
   }, [user]);
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSkeleton variant="dashboard" />;
   }
 
   const getPerformanceChange = (current: number, previous: number) => {
@@ -469,10 +463,20 @@ const ModernStaffDashboard = () => {
                         >
                           {event.status}
                         </Badge>
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/dashboard/events?view=${event.id}`)}
+                          title="View Event Details"
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/dashboard/events?edit=${event.id}`)}
+                          title="Edit Event"
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                       </div>
@@ -483,7 +487,10 @@ const ModernStaffDashboard = () => {
                 <div className="text-center py-8 text-gray-500">
                   <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>No events created yet</p>
-                  <Button className="mt-4 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700">
+                  <Button
+                    className="mt-4 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+                    onClick={() => navigate("/dashboard/events")}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Create Your First Event
                   </Button>

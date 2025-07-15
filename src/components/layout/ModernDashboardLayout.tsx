@@ -48,6 +48,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useUser } from "@/hooks/useUser";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 interface MenuItem {
   icon: React.ReactNode;
@@ -326,15 +327,15 @@ const ModernSidebar = ({
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.location.href = '/dashboard/profile'}>
                     <User className="mr-2 h-4 w-4" />
                     Profile Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.location.href = '/dashboard/notifications'}>
                     <Settings className="mr-2 h-4 w-4" />
-                    Preferences
+                    Notifications
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.open('mailto:support@iteam.com', '_blank')}>
                     <HelpCircle className="mr-2 h-4 w-4" />
                     Help & Support
                   </DropdownMenuItem>
@@ -559,7 +560,9 @@ const ModernDashboardLayout = () => {
         {/* Page Content */}
         <main className="p-6">
           <div className="mx-auto max-w-7xl">
-            <Outlet />
+            <ErrorBoundary>
+              <Outlet />
+            </ErrorBoundary>
           </div>
         </main>
 
