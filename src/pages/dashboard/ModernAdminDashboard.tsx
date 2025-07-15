@@ -63,6 +63,8 @@ interface AdminStats {
   totalEvents: number;
   upcomingEvents: number;
   completedEvents: number;
+  totalRegistrations: number;
+  averageAttendanceRate: number;
   totalRevenue: number;
   monthlyRevenue: number;
   pendingPayments: number;
@@ -107,6 +109,8 @@ const ModernAdminDashboard = () => {
     totalEvents: 0,
     upcomingEvents: 0,
     completedEvents: 0,
+    totalRegistrations: 0,
+    averageAttendanceRate: 0,
     totalRevenue: 0,
     monthlyRevenue: 0,
     pendingPayments: 0,
@@ -171,6 +175,17 @@ const ModernAdminDashboard = () => {
         events?.filter((e) => new Date(e.event_date) > now).length || 0;
       const completedEvents =
         events?.filter((e) => new Date(e.event_date) < now).length || 0;
+
+      // Fetch event registrations for more detailed statistics
+      const { data: eventRegistrations } = await supabase
+        .from("event_registrations")
+        .select("*");
+
+      const totalRegistrations = eventRegistrations?.length || 0;
+      const attendedRegistrations = eventRegistrations?.filter(reg => reg.attended).length || 0;
+      const averageAttendanceRate = totalRegistrations > 0
+        ? (attendedRegistrations / totalRegistrations) * 100
+        : 0;
 
       // Payment statistics
       const totalRevenue =
@@ -289,6 +304,8 @@ const ModernAdminDashboard = () => {
         totalEvents,
         upcomingEvents,
         completedEvents,
+        totalRegistrations,
+        averageAttendanceRate,
         totalRevenue,
         monthlyRevenue,
         pendingPayments,
@@ -423,6 +440,24 @@ const ModernAdminDashboard = () => {
                 </p>
               </div>
               <Calendar className="h-8 w-8 text-orange-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Event Registrations Card */}
+        <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-indigo-700">Event Registrations</p>
+                <p className="text-2xl font-bold text-indigo-900">
+                  {stats.totalRegistrations}
+                </p>
+                <p className="text-xs text-indigo-600">
+                  {stats.averageAttendanceRate.toFixed(1)}% avg attendance rate
+                </p>
+              </div>
+              <UserCheck className="h-8 w-8 text-indigo-600" />
             </div>
           </CardContent>
         </Card>

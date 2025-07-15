@@ -21,6 +21,7 @@ import Notifications from "./pages/dashboard/Notifications";
 import Achievements from "./pages/dashboard/Achievements";
 import AdminDashboard from "./pages/dashboard/admin/AdminDashboard";
 import UserManagement from "./pages/dashboard/admin/UserManagement";
+import EventManagement from "./pages/dashboard/admin/EventManagement";
 import MembershipManagement from "./pages/dashboard/admin/MembershipManagement";
 import PaymentManagement from "./pages/dashboard/admin/PaymentManagement";
 import RealTimeAdminDashboard from "./pages/dashboard/admin/RealTimeAdminDashboard";
@@ -89,6 +90,7 @@ const App = () => (
                   <Route path="modern" element={<ModernAdminDashboard />} />
                   <Route path="realtime" element={<RealTimeAdminDashboard />} />
                   <Route path="users" element={<UserManagement />} />
+                  <Route path="events" element={<EventManagement />} />
                   <Route
                     path="memberships"
                     element={<MembershipManagement />}

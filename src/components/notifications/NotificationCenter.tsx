@@ -81,10 +81,20 @@ const NotificationCenter: React.FC = () => {
 
   const markAsRead = async (notificationId: string) => {
     try {
-      const { error } = await supabase
+      // Try with 'read' column first
+      let { error } = await supabase
         .from('notifications')
         .update({ read: true })
         .eq('id', notificationId);
+
+      // If 'read' column doesn't exist, try with 'is_read' column
+      if (error && error.message.includes('column notifications.read does not exist')) {
+        const result = await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('id', notificationId);
+        error = result.error;
+      }
 
       if (error) throw error;
 
@@ -102,11 +112,22 @@ const NotificationCenter: React.FC = () => {
 
   const markAllAsRead = async () => {
     try {
-      const { error } = await supabase
+      // Try with 'read' column first
+      let { error } = await supabase
         .from('notifications')
         .update({ read: true })
         .eq('user_id', user?.id)
         .eq('read', false);
+
+      // If 'read' column doesn't exist, try with 'is_read' column
+      if (error && error.message.includes('column notifications.read does not exist')) {
+        const result = await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', user?.id)
+          .eq('is_read', false);
+        error = result.error;
+      }
 
       if (error) throw error;
 

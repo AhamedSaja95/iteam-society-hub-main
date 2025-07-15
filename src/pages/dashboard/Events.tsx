@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { EventService } from "@/services/supabase/event.service";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/sonner";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { X, Edit } from "lucide-react";
 
 const Events = () => {
   const { user, role } = useAuth();
@@ -49,7 +51,12 @@ const Events = () => {
     queryKey: ["events"],
     queryFn: async () => {
       try {
-        return await EventService.getAllEvents();
+        const eventsData = await EventService.getAllEvents();
+        // Ensure event_registrations is always an array
+        return eventsData?.map(event => ({
+          ...event,
+          event_registrations: event.event_registrations || []
+        })) || [];
       } catch (error) {
         console.error("Error fetching events:", error);
         // Return empty array on error to prevent crashes
@@ -62,6 +69,9 @@ const Events = () => {
   const registerMutation = useMutation({
     mutationFn: async (eventId: string) => {
       try {
+        if (!user?.id) {
+          throw new Error("User not authenticated");
+        }
         return await EventService.registerForEvent(eventId, user.id);
       } catch (error) {
         console.error("Event registration error:", error);
@@ -80,47 +90,151 @@ const Events = () => {
 
   // Create event mutation
   const createEventMutation = useMutation({
-    mutationFn: (eventData: any) =>
-      EventService.createEvent({
+    mutationFn: (eventData: any) => {
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
+      return EventService.createEvent({
         ...eventData,
         created_by: user.id,
-      }),
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       setIsCreateDialogOpen(false);
       toast.success("Event created successfully");
-      setNewEvent({
-        name: "",
-        description: "",
-        event_date: "",
-        location: "",
-        max_participants: "",
-        event_type: "",
-        requirements: "",
-        contact_info: "",
-      });
+      resetForm();
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create event");
     },
   });
 
-  const handleCreateEvent = (e: React.FormEvent) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size should be less than 5MB');
+        return;
+      }
+
+      setBannerImage(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setBannerPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeBannerImage = () => {
+    setBannerImage(null);
+    setBannerPreview(null);
+  };
+
+  const resetForm = () => {
+    setNewEvent({
+      name: "",
+      description: "",
+      event_date: "",
+      location: "",
+      max_participants: "",
+      event_type: "",
+      requirements: "",
+      contact_info: "",
+    });
+    setBannerImage(null);
+    setBannerPreview(null);
+  };
+
+  const uploadImageToSupabase = async (file: File): Promise<string | null> => {
+    try {
+      setUploadingImage(true);
+
+      // Create unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `event-banners/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('event-images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('Upload error:', error);
+        if (error.message.includes('Bucket not found')) {
+          toast.error('Storage bucket not configured. Please contact administrator.');
+        } else if (error.message.includes('File size')) {
+          toast.error('File size too large. Maximum 5MB allowed.');
+        } else {
+          toast.error(`Upload failed: ${error.message}`);
+        }
+        throw error;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('event-images')
+        .getPublicUrl(filePath);
+
+      toast.success('Image uploaded successfully!');
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    createEventMutation.mutate(newEvent);
+
+    let bannerUrl = null;
+
+    // Upload banner image if selected
+    if (bannerImage) {
+      bannerUrl = await uploadImageToSupabase(bannerImage);
+      if (!bannerUrl) {
+        return; // Stop if image upload failed
+      }
+    }
+
+    // Create event with banner URL
+    const eventData = {
+      ...newEvent,
+      banner_image: bannerUrl,
+    };
+
+    createEventMutation.mutate(eventData);
   };
 
   const upcomingEvents = events.filter(
     (event) => new Date(event.event_date) > new Date()
   );
   const myEvents = events.filter((event) =>
+    event.event_registrations &&
+    user &&
     event.event_registrations.some((reg) => reg.user_id === user.id)
   );
   const pastEvents = events.filter(
     (event) => new Date(event.event_date) <= new Date()
   );
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-iteam-primary"></div>
@@ -203,6 +317,58 @@ const Events = () => {
                   />
                 </div>
 
+                {/* Banner Image Upload */}
+                <div className="space-y-2">
+                  <Label htmlFor="banner_image">Event Banner Image (Optional)</Label>
+                  <div className="space-y-3">
+                    {bannerPreview ? (
+                      <div className="relative">
+                        <img
+                          src={bannerPreview}
+                          alt="Banner preview"
+                          className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                          onClick={removeBannerImage}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                        <div className="space-y-2">
+                          <div className="mx-auto h-12 w-12 text-gray-400">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <label htmlFor="banner_image" className="cursor-pointer">
+                              <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                                Click to upload banner image
+                              </span>
+                              <input
+                                id="banner_image"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageUpload}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            PNG, JPG, GIF up to 5MB. Recommended: 1200x600px
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="event_date">Event Date & Time *</Label>
@@ -283,16 +449,21 @@ const Events = () => {
                     type="button"
                     variant="outline"
                     className="flex-1"
-                    onClick={() => setIsCreateDialogOpen(false)}
+                    onClick={() => {
+                      resetForm();
+                      setIsCreateDialogOpen(false);
+                    }}
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     className="flex-1 bg-iteam-primary"
-                    disabled={createEventMutation.isLoading}
+                    disabled={createEventMutation.isLoading || uploadingImage}
                   >
-                    {createEventMutation.isLoading
+                    {uploadingImage
+                      ? "Uploading Image..."
+                      : createEventMutation.isLoading
                       ? "Creating..."
                       : "Create Event"}
                   </Button>
@@ -304,10 +475,13 @@ const Events = () => {
       </div>
 
       <Tabs defaultValue="upcoming">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className={`grid w-full ${(role === "admin" || role === "staff") ? "grid-cols-4" : "grid-cols-3"}`}>
           <TabsTrigger value="upcoming">Upcoming Events</TabsTrigger>
           <TabsTrigger value="my-events">My Events</TabsTrigger>
           <TabsTrigger value="past">Past Events</TabsTrigger>
+          {(role === "admin" || role === "staff") && (
+            <TabsTrigger value="manage">Manage</TabsTrigger>
+          )}
         </TabsList>
 
         {/* Upcoming Events Tab */}
@@ -333,10 +507,10 @@ const Events = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {upcomingEvents.map((event) => {
-              const isRegistered = event.event_registrations.some(
+              const isRegistered = event.event_registrations && user?.id && event.event_registrations.some(
                 (reg) => reg.user_id === user.id
               );
-              const registeredCount = event.event_registrations.length;
+              const registeredCount = event.event_registrations?.length || 0;
               const isFull = registeredCount >= event.max_participants;
 
               return (
@@ -355,6 +529,22 @@ const Events = () => {
                       )}
                     </div>
                   </CardHeader>
+
+                  {/* Event Banner Image */}
+                  {event.banner_image && (
+                    <div className="px-6 pb-4">
+                      <img
+                        src={event.banner_image}
+                        alt={`${event.name} banner`}
+                        className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                        onError={(e) => {
+                          // Hide image if it fails to load
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
@@ -381,7 +571,7 @@ const Events = () => {
 
                     <p className="text-sm">{event.description}</p>
                   </CardContent>
-                  <CardFooter>
+                  <CardFooter className="space-y-2">
                     <Button
                       className="w-full"
                       variant={isRegistered ? "outline" : "default"}
@@ -394,6 +584,21 @@ const Events = () => {
                         ? "Event Full"
                         : "Register Now"}
                     </Button>
+
+                    {/* Admin Actions */}
+                    {role === "admin" && (
+                      <div className="flex gap-2 w-full">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => window.location.href = `/dashboard/admin/events`}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Manage
+                        </Button>
+                      </div>
+                    )}
                   </CardFooter>
                 </Card>
               );
@@ -420,6 +625,21 @@ const Events = () => {
                       <Badge className="bg-iteam-success">Registered</Badge>
                     </div>
                   </CardHeader>
+
+                  {/* Event Banner Image */}
+                  {event.banner_image && (
+                    <div className="px-6 pb-4">
+                      <img
+                        src={event.banner_image}
+                        alt={`${event.name} banner`}
+                        className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
@@ -506,7 +726,7 @@ const Events = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {pastEvents.map((event) => {
-                  const registration = event.event_registrations.find(
+                  const registration = event.event_registrations && user?.id && event.event_registrations.find(
                     (reg) => reg.user_id === user.id
                   );
                   const attended = registration?.attended;
@@ -552,6 +772,30 @@ const Events = () => {
             </div>
           )}
         </TabsContent>
+
+        {/* Manage Tab - For Staff/Admin Only */}
+        {(role === "admin" || role === "staff") && (
+          <TabsContent value="manage" className="pt-6">
+            <div className="text-center py-12">
+              <div className="mx-auto h-24 w-24 text-blue-500 mb-4">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Advanced Event Management</h3>
+              <p className="text-gray-500 mb-6">
+                Access comprehensive event management tools with detailed registration tracking,
+                attendance management, and analytics.
+              </p>
+              <Button
+                className="bg-blue-500 hover:bg-blue-600"
+                onClick={() => window.location.href = '/dashboard/admin/events'}
+              >
+                Open Event Management Dashboard
+              </Button>
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

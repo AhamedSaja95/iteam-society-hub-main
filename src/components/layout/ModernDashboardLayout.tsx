@@ -175,6 +175,13 @@ const getNavigationItems = (userRole: string, notifications: number = 0): MenuIt
         href: "/dashboard/admin/users",
       },
       {
+        icon: <Calendar size={20} />,
+        label: "Event Management",
+        title: "Event Management",
+        href: "/dashboard/admin/events",
+        badge: "New",
+      },
+      {
         icon: <CreditCard size={20} />,
         label: "Payment Management",
         title: "Payment Management",
@@ -433,16 +440,41 @@ const ModernDashboardLayout = () => {
   // Fetch notification count
   useEffect(() => {
     const fetchNotifications = async () => {
-      if (!user) return;
+      if (!user?.id) return;
       try {
-        const { data } = await supabase
+        // First try with 'read' column
+        let { data, error } = await supabase
           .from("notifications")
           .select("id")
           .eq("user_id", user.id)
           .eq("read", false);
+
+        // If 'read' column doesn't exist, try with 'is_read' column
+        if (error && error.message.includes('column notifications.read does not exist')) {
+          console.log("Trying with is_read column instead");
+          const result = await supabase
+            .from("notifications")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("is_read", false);
+
+          data = result.data;
+          error = result.error;
+        }
+
+        if (error) {
+          // If notifications table doesn't exist, just set to 0
+          if (error.message.includes('relation "notifications" does not exist')) {
+            setNotifications(0);
+            return;
+          }
+          throw error;
+        }
+
         setNotifications(data?.length || 0);
       } catch (error) {
         console.error("Error fetching notifications:", error);
+        setNotifications(0); // Fallback to 0 notifications
       }
     };
 
