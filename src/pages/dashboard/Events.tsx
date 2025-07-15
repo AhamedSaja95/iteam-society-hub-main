@@ -69,22 +69,43 @@ const Events = () => {
   const registerMutation = useMutation({
     mutationFn: async (eventId: string) => {
       try {
+        console.log("Registration mutation started for event:", eventId);
+        console.log("Current user:", user);
+
         if (!user?.id) {
+          console.error("User not authenticated:", user);
           throw new Error("User not authenticated");
         }
-        return await EventService.registerForEvent(eventId, user.id);
+
+        console.log("Calling EventService.registerForEvent with:", { eventId, userId: user.id });
+        const result = await EventService.registerForEvent(eventId, user.id);
+        console.log("Registration result:", result);
+        return result;
       } catch (error) {
         console.error("Event registration error:", error);
         throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Registration mutation successful:", data);
       queryClient.invalidateQueries({ queryKey: ["events"] });
-      toast.success("Successfully registered for event");
+      if (data) {
+        toast.success("Successfully registered for event");
+      } else {
+        toast.success("Successfully unregistered from event");
+      }
     },
     onError: (error: any) => {
       console.error("Registration failed:", error);
-      toast.error(error.message || "Failed to register for event");
+
+      // Provide more specific error messages
+      if (error.message.includes("row-level security")) {
+        toast.error("Permission denied. Please try logging out and back in.");
+      } else if (error.message.includes("User not authenticated")) {
+        toast.error("Please log in to register for events");
+      } else {
+        toast.error(error.message || "Failed to register for event");
+      }
     },
   });
 

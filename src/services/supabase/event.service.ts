@@ -54,37 +54,87 @@ export const EventService = {
   // Old methods removed to avoid duplication
 
   registerForEvent: async (eventId: string, userId: string) => {
-    // Check if user is already registered
-    const { data: existingRegistration } = await supabase
-      .from("event_registrations")
-      .select("id")
-      .eq("event_id", eventId)
-      .eq("user_id", userId)
-      .single();
+    try {
+      console.log("Attempting to register user:", userId, "for event:", eventId);
 
-    if (existingRegistration) {
-      // If registered, unregister
-      const { error } = await supabase
+      // Check if user is already registered
+      const { data: existingRegistration, error: selectError } = await supabase
         .from("event_registrations")
-        .delete()
-        .eq("id", existingRegistration.id);
-
-      if (error) throw error;
-      return null;
-    } else {
-      // If not registered, register
-      const { data, error } = await supabase
-        .from("event_registrations")
-        .insert({
-          event_id: eventId,
-          user_id: userId,
-          registered_at: new Date().toISOString(),
-        })
-        .select()
+        .select("id")
+        .eq("event_id", eventId)
+        .eq("user_id", userId)
         .single();
 
-      if (error) throw error;
-      return data;
+      if (selectError && selectError.code !== 'PGRST116') {
+        console.error("Error checking existing registration:", selectError);
+        console.error("HTTP Status:", selectError.details);
+        console.error("Error Code:", selectError.code);
+
+        // Handle specific HTTP status codes
+        if (selectError.message.includes('403') || selectError.code === '42501') {
+          throw new Error("Permission denied. Please check your login status and try again.");
+        } else if (selectError.message.includes('406')) {
+          throw new Error("Request format error. Please refresh the page and try again.");
+        }
+
+        throw selectError;
+      }
+
+      if (existingRegistration) {
+        console.log("User already registered, unregistering...");
+        // If registered, unregister
+        const { error } = await supabase
+          .from("event_registrations")
+          .delete()
+          .eq("id", existingRegistration.id);
+
+        if (error) {
+          console.error("Error unregistering:", error);
+          throw error;
+        }
+        console.log("Successfully unregistered");
+        return null;
+      } else {
+        console.log("User not registered, registering...");
+        // If not registered, register
+        const { data, error } = await supabase
+          .from("event_registrations")
+          .insert({
+            event_id: eventId,
+            user_id: userId,
+            registered_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Error registering for event:", error);
+          console.error("Error details:", {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint
+          });
+
+          // Handle specific error types
+          if (error.code === '42501' || error.message.includes('row-level security')) {
+            throw new Error("Permission denied. You may need to log out and log back in.");
+          } else if (error.message.includes('403')) {
+            throw new Error("Access forbidden. Please check your permissions.");
+          } else if (error.message.includes('406')) {
+            throw new Error("Request format error. Please refresh the page and try again.");
+          } else if (error.code === '23505') {
+            throw new Error("You are already registered for this event.");
+          }
+
+          throw error;
+        }
+        console.log("Successfully registered:", data);
+        return data;
+      }
+    } catch (error) {
+      console.error("Registration process failed:", error);
+      throw error;
     }
   },
 

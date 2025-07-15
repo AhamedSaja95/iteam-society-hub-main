@@ -49,6 +49,7 @@ import { useUser } from "@/hooks/useUser";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import AuthDebug from "@/components/debug/AuthDebug";
 
 interface MenuItem {
   icon: React.ReactNode;
@@ -761,6 +762,9 @@ const ModernDashboardLayout = () => {
           </div>
         </footer>
       </div>
+
+      {/* Debug component - only shows in development */}
+      {process.env.NODE_ENV === 'development' && <AuthDebug />}
     </div>
   );
 };

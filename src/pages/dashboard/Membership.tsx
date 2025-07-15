@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { MembershipService } from "@/services/supabase/membership.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,13 +52,16 @@ interface Membership {
 interface Payment {
   id: string;
   amount: number;
-  payment_method: string;
-  payment_date: string;
-  receipt_url?: string;
-  status: string;
+  notes?: string;
+  payment_date?: string;
+  bank_slip_url?: string;
+  status?: string;
   verified_by?: string;
-  verification_date?: string;
-  created_at: string;
+  verified_at?: string;
+  created_at?: string;
+  updated_at?: string;
+  user_id: string;
+  membership_id: string;
 }
 
 interface UserProfile {
@@ -150,17 +154,17 @@ const Membership = () => {
       if (profileError) throw profileError;
       setProfile(profileData);
 
-      // Fetch current membership
-      const { data: membershipData } = await supabase
-        .from("memberships")
-        .select("*")
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (membershipData) {
-        setMembership(membershipData);
+      // Fetch current membership using service
+      try {
+        const membershipData = await MembershipService.getCurrentMembership(user?.id!);
+        if (membershipData) {
+          setMembership(membershipData);
+        }
+      } catch (error: any) {
+        // Only log error if it's not a "no membership found" case
+        if (!error.message.includes("No membership found")) {
+          console.error("Error fetching membership:", error);
+        }
       }
 
       // Fetch payment history
@@ -208,38 +212,31 @@ const Membership = () => {
         .toString()
         .padStart(3, "0")}`;
 
-      // Create membership record
-      const { data: membershipData, error: membershipError } = await supabase
-        .from("memberships")
-        .insert({
-          user_id: user?.id,
-          tier: selectedTier,
-          status: "pending_approval",
-          start_date: new Date().toISOString().split("T")[0],
-          end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0],
-          amount: selectedPlan.price,
-          eid: eid,
-        })
-        .select()
-        .single();
-
-      if (membershipError) throw membershipError;
-
-      // Create payment record
-      const { error: paymentError } = await supabase.from("payments").insert({
-        user_id: user?.id,
+      // Create membership record using service
+      const membershipData = await MembershipService.createMembership({
+        user_id: user?.id!,
+        tier: selectedTier,
+        status: "pending_approval",
+        start_date: new Date().toISOString().split("T")[0],
+        end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0],
         amount: selectedPlan.price,
-        payment_method: paymentMethod,
-        payment_date: new Date().toISOString(),
-        receipt_url: receiptFile
+        eid: eid,
+      });
+
+      // Create payment record using service
+      await MembershipService.createPayment({
+        user_id: user?.id!,
+        membership_id: membershipData.id,
+        amount: selectedPlan.price,
+        notes: paymentMethod ? `Payment method: ${paymentMethod}${paymentNotes ? `. Notes: ${paymentNotes}` : ''}` : paymentNotes,
+        payment_date: new Date().toISOString().split("T")[0], // Use date format, not full ISO string
+        bank_slip_url: receiptFile
           ? `receipts/${user?.id}/${Date.now()}_${receiptFile.name}`
           : null,
         status: "pending",
       });
-
-      if (paymentError) throw paymentError;
 
       toast.success("Membership application submitted successfully!");
 
@@ -251,9 +248,19 @@ const Membership = () => {
       setPaymentMethod("");
       setReceiptFile(null);
       setPaymentNotes("");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error applying for membership:", error);
-      toast.error("Failed to submit membership application");
+
+      // Provide specific error messages
+      if (error.message.includes("Permission denied")) {
+        toast.error("Permission denied. Please try logging out and back in.");
+      } else if (error.message.includes("already have a membership")) {
+        toast.error("You already have a membership application pending.");
+      } else if (error.message.includes("row-level security")) {
+        toast.error("Access denied. Please check your login status and try again.");
+      } else {
+        toast.error(error.message || "Failed to submit membership application");
+      }
     } finally {
       setApplying(false);
     }
@@ -741,27 +748,25 @@ const Membership = () => {
                                   : "bg-red-500"
                               }
                             >
-                              {payment.status.toUpperCase()}
+                              {(payment.status || "unknown").toUpperCase()}
                             </Badge>
                             <span className="font-semibold">
                               Rs. {payment.amount.toLocaleString()}
                             </span>
                           </div>
                           <p className="text-sm text-gray-600 mt-1">
-                            {payment.payment_method
-                              .replace("_", " ")
-                              .toUpperCase()}{" "}
+                            {payment.notes || "No payment method specified"}{" "}
                             •{" "}
-                            {new Date(
-                              payment.payment_date
-                            ).toLocaleDateString()}
+                            {payment.payment_date
+                              ? new Date(payment.payment_date).toLocaleDateString()
+                              : "Date not specified"}
                           </p>
                         </div>
                         <div className="text-right">
-                          {payment.receipt_url && (
+                          {payment.bank_slip_url && (
                             <Button variant="outline" size="sm">
                               <FileText className="h-4 w-4 mr-2" />
-                              Receipt
+                              Bank Slip
                             </Button>
                           )}
                         </div>
