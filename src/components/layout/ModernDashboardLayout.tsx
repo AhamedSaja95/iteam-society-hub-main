@@ -56,7 +56,141 @@ interface MenuItem {
   href: string;
   badge?: string;
   children?: MenuItem[];
+  title?: string; // For mobile navigation
 }
+
+// Navigation items function that can be used by both desktop and mobile
+const getNavigationItems = (userRole: string, notifications: number = 0): MenuItem[] => {
+  const baseItems: MenuItem[] = [
+    {
+      icon: <Home size={20} />,
+      label: "Dashboard",
+      title: "Dashboard",
+      href: "/dashboard",
+    },
+    {
+      icon: <User size={20} />,
+      label: "My Profile",
+      title: "My Profile",
+      href: "/dashboard/profile",
+    },
+    {
+      icon: <Calendar size={20} />,
+      label: "Events",
+      title: "Events",
+      href: "/dashboard/events",
+      badge: "New",
+    },
+    {
+      icon: <FileText size={20} />,
+      label: "Membership",
+      title: "Membership",
+      href: "/dashboard/membership",
+    },
+    {
+      icon: <Bell size={20} />,
+      label: "Notifications",
+      title: "Notifications",
+      href: "/dashboard/notifications",
+      badge: notifications > 0 ? notifications.toString() : undefined,
+    },
+  ];
+
+  if (userRole === "student") {
+    return [
+      ...baseItems,
+      {
+        icon: <LayoutDashboard size={20} />,
+        label: "Modern Dashboard",
+        title: "Modern Dashboard",
+        href: "/dashboard/modern-student",
+        badge: "New",
+      },
+      {
+        icon: <Activity size={20} />,
+        label: "Real-Time Dashboard",
+        title: "Real-Time Dashboard",
+        href: "/dashboard/realtime-student",
+      },
+      {
+        icon: <Award size={20} />,
+        label: "My Achievements",
+        title: "My Achievements",
+        href: "/dashboard/achievements",
+      },
+    ];
+  }
+
+  if (userRole === "staff") {
+    return [
+      ...baseItems,
+      {
+        icon: <LayoutDashboard size={20} />,
+        label: "Modern Dashboard",
+        title: "Modern Dashboard",
+        href: "/dashboard/modern-staff",
+        badge: "New",
+      },
+      {
+        icon: <Activity size={20} />,
+        label: "Real-Time Dashboard",
+        title: "Real-Time Dashboard",
+        href: "/dashboard/realtime-staff",
+      },
+      {
+        icon: <Plus size={20} />,
+        label: "Create Event",
+        title: "Create Event",
+        href: "/dashboard/events",
+      },
+      {
+        icon: <BarChart3 size={20} />,
+        label: "Event Analytics",
+        title: "Event Analytics",
+        href: "/dashboard/events",
+      },
+    ];
+  }
+
+  if (userRole === "admin") {
+    return [
+      ...baseItems,
+      {
+        icon: <LayoutDashboard size={20} />,
+        label: "Modern Dashboard",
+        title: "Modern Dashboard",
+        href: "/dashboard/admin/modern",
+        badge: "New",
+      },
+      {
+        icon: <Shield size={20} />,
+        label: "Admin Panel",
+        title: "Admin Panel",
+        href: "/dashboard/admin",
+      },
+      {
+        icon: <Users size={20} />,
+        label: "User Management",
+        title: "User Management",
+        href: "/dashboard/admin/users",
+      },
+      {
+        icon: <CreditCard size={20} />,
+        label: "Payment Management",
+        title: "Payment Management",
+        href: "/dashboard/admin/payments",
+      },
+      {
+        icon: <UserCheck size={20} />,
+        label: "Membership Management",
+        title: "Membership Management",
+        href: "/dashboard/admin/memberships",
+      },
+    ];
+  }
+
+  return baseItems;
+};
 
 interface ModernSidebarProps {
   isCollapsed: boolean;
@@ -91,132 +225,9 @@ const ModernSidebar = ({
     }
   };
 
-  // Role-based menu items
+  // Use the shared navigation items function
   const getMenuItems = (): MenuItem[] => {
-    const baseItems: MenuItem[] = [
-      {
-        icon: <Home size={20} />,
-        label: "Dashboard",
-        href: "/dashboard",
-      },
-      {
-        icon: <User size={20} />,
-        label: "My Profile",
-        href: "/dashboard/profile",
-      },
-      {
-        icon: <Calendar size={20} />,
-        label: "Events",
-        href: "/dashboard/events",
-        badge: "New",
-      },
-      {
-        icon: <FileText size={20} />,
-        label: "Membership",
-        href: "/dashboard/membership",
-      },
-      {
-        icon: <Bell size={20} />,
-        label: "Notifications",
-        href: "/dashboard/notifications",
-        badge: notifications > 0 ? notifications.toString() : undefined,
-      },
-    ];
-
-    if (userRole === "student") {
-      return [
-        ...baseItems,
-        {
-          icon: <LayoutDashboard size={20} />,
-          label: "Modern Dashboard",
-          href: "/dashboard/modern-student",
-          badge: "New",
-        },
-        {
-          icon: <Activity size={20} />,
-          label: "Real-Time Dashboard",
-          href: "/dashboard/realtime-student",
-        },
-        {
-          icon: <Award size={20} />,
-          label: "My Achievements",
-          href: "/dashboard/achievements",
-        },
-      ];
-    }
-
-    if (userRole === "staff") {
-      return [
-        ...baseItems,
-        {
-          icon: <LayoutDashboard size={20} />,
-          label: "Modern Dashboard",
-          href: "/dashboard/modern-staff",
-          badge: "New",
-        },
-        {
-          icon: <Activity size={20} />,
-          label: "Real-Time Dashboard",
-          href: "/dashboard/realtime-staff",
-        },
-        {
-          icon: <Plus size={20} />,
-          label: "Create Event",
-          href: "/dashboard/events",
-        },
-        {
-          icon: <BarChart3 size={20} />,
-          label: "Event Analytics",
-          href: "/dashboard/events",
-        },
-      ];
-    }
-
-    if (userRole === "admin") {
-      return [
-        ...baseItems,
-        {
-          icon: <LayoutDashboard size={20} />,
-          label: "Modern Dashboard",
-          href: "/dashboard/admin/modern",
-          badge: "New",
-        },
-        {
-          icon: <Shield size={20} />,
-          label: "Admin Panel",
-          href: "/dashboard/admin",
-          children: [
-            {
-              icon: <LayoutDashboard size={20} />,
-              label: "Overview",
-              href: "/dashboard/admin",
-            },
-            {
-              icon: <Activity size={20} />,
-              label: "Real-Time Admin",
-              href: "/dashboard/admin/realtime",
-            },
-            {
-              icon: <Users size={20} />,
-              label: "User Management",
-              href: "/dashboard/admin/users",
-            },
-            {
-              icon: <UserCheck size={20} />,
-              label: "Memberships",
-              href: "/dashboard/admin/memberships",
-            },
-            {
-              icon: <CreditCard size={20} />,
-              label: "Payments",
-              href: "/dashboard/admin/payments",
-            },
-          ],
-        },
-      ];
-    }
-
-    return baseItems;
+    return getNavigationItems(userRole, notifications);
   };
 
   const menuItems = getMenuItems();
@@ -406,6 +417,7 @@ const ModernSidebar = ({
 
 const ModernDashboardLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [notifications, setNotifications] = useState(0);
   const { user } = useAuth();
@@ -445,6 +457,15 @@ const ModernDashboardLayout = () => {
     : "User";
   const userAvatar = userProfile?.photo_url;
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
   // Get page title based on current route
   const getPageTitle = () => {
     const path = location.pathname;
@@ -465,31 +486,110 @@ const ModernDashboardLayout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ModernSidebar
-        isCollapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        userRole={userRole}
-        userName={userName}
-        userAvatar={userAvatar}
-        notifications={notifications}
-      />
+      {/* Desktop Sidebar - Hidden on mobile */}
+      <div className="hidden lg:block">
+        <ModernSidebar
+          isCollapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          userRole={userRole}
+          userName={userName}
+          userAvatar={userAvatar}
+          notifications={notifications}
+        />
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {mobileMenuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Mobile Sidebar */}
+          <div className="fixed left-0 top-0 z-50 h-screen w-72 bg-white border-r border-gray-200 shadow-xl lg:hidden">
+            <div className="flex h-full flex-col">
+              {/* Mobile Header */}
+              <div className="flex h-16 items-center justify-between px-4 border-b border-gray-100">
+                <Link to="/dashboard" className="flex items-center gap-3" onClick={() => setMobileMenuOpen(false)}>
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">IT</span>
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-bold text-gray-900">I-Team Society</h1>
+                    <p className="text-xs text-gray-500 capitalize">{userRole} Portal</p>
+                  </div>
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="h-8 w-8 hover:bg-gray-100"
+                >
+                  <X size={16} />
+                </Button>
+              </div>
+
+              {/* Mobile Navigation */}
+              <nav className="flex-1 overflow-y-auto px-4 py-4">
+                <div className="space-y-2">
+                  {getNavigationItems(userRole, notifications).map((item) => (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        location.pathname === item.href
+                          ? "bg-blue-100 text-blue-700"
+                          : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      )}
+                    >
+                      {item.icon}
+                      <span>{item.label}</span>
+                      {item.badge && (
+                        <Badge variant="secondary" className="ml-auto text-xs px-2 py-0.5">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </nav>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Main Content */}
       <div
         className={cn(
           "transition-all duration-300",
-          sidebarCollapsed ? "ml-16" : "ml-72"
+          // No margin on mobile, margin on large screens
+          "ml-0 lg:ml-72",
+          sidebarCollapsed && "lg:ml-16"
         )}
       >
         {/* Top Header */}
         <header className="sticky top-0 z-40 h-16 bg-white border-b border-gray-200 shadow-sm">
-          <div className="flex h-full items-center justify-between px-6">
+          <div className="flex h-full items-center justify-between px-4 md:px-6">
             <div className="flex items-center gap-4">
+              {/* Mobile menu button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+
               <div>
-                <h1 className="text-xl font-bold text-gray-900">
+                <h1 className="text-lg md:text-xl font-bold text-gray-900">
                   {getPageTitle()}
                 </h1>
-                <p className="text-sm text-gray-500">
+                <p className="text-xs md:text-sm text-gray-500 hidden sm:block">
                   {currentTime.toLocaleDateString("en-US", {
                     weekday: "long",
                     year: "numeric",
@@ -505,9 +605,9 @@ const ModernDashboardLayout = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               {/* Search */}
-              <div className="relative hidden md:block">
+              <div className="relative hidden lg:block">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
@@ -517,48 +617,93 @@ const ModernDashboardLayout = () => {
               </div>
 
               {/* Quick Actions */}
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
+              <div className="flex items-center gap-1 md:gap-2">
+                <Button variant="ghost" size="icon" className="relative h-8 w-8 md:h-10 md:w-10">
+                  <Bell className="h-4 w-4 md:h-5 md:w-5" />
                   {notifications > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
-                      {notifications}
+                    <span className="absolute -top-1 -right-1 h-3 w-3 md:h-4 md:w-4 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
+                      {notifications > 9 ? '9+' : notifications}
                     </span>
                   )}
                 </Button>
 
-                <Button variant="ghost" size="icon">
-                  <MessageSquare className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10">
+                  <MessageSquare className="h-4 w-4 md:h-5 md:w-5" />
                 </Button>
 
                 {(userRole === "staff" || userRole === "admin") && (
                   <Button
                     size="sm"
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 hidden sm:flex"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Event
+                    <span className="hidden md:inline">Create Event</span>
+                    <span className="md:hidden">Create</span>
+                  </Button>
+                )}
+
+                {/* Mobile create button */}
+                {(userRole === "staff" || userRole === "admin") && (
+                  <Button
+                    size="icon"
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 sm:hidden h-8 w-8"
+                  >
+                    <Plus className="h-4 w-4" />
                   </Button>
                 )}
               </div>
 
               {/* User Avatar */}
-              <Avatar className="h-8 w-8 ring-2 ring-blue-100">
-                <AvatarImage src={userAvatar} />
-                <AvatarFallback className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold">
-                  {userName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8 ring-2 ring-blue-100">
+                      <AvatarImage src={userAvatar} />
+                      <AvatarFallback className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold">
+                        {userName
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{userName}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => window.location.href = '/dashboard/profile'}>
+                    <User className="mr-2 h-4 w-4" />
+                    Profile Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.location.href = '/dashboard/notifications'}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Notifications
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.open('mailto:support@iteam.com', '_blank')}>
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    Help & Support
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="p-6">
+        <main className="p-4 md:p-6">
           <div className="mx-auto max-w-7xl">
             <ErrorBoundary>
               <Outlet />
@@ -567,18 +712,18 @@ const ModernDashboardLayout = () => {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-gray-200 bg-white px-6 py-4">
-          <div className="mx-auto max-w-7xl flex items-center justify-between text-sm text-gray-500">
-            <div className="flex items-center gap-4">
-              <span>© 2024 I-Team Society</span>
-              <Separator orientation="vertical" className="h-4" />
-              <span>The Open University of Sri Lanka</span>
+        <footer className="border-t border-gray-200 bg-white px-4 md:px-6 py-4">
+          <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-gray-500">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+              <span className="text-center sm:text-left">© 2024 I-Team Society</span>
+              <Separator orientation="vertical" className="h-4 hidden sm:block" />
+              <span className="text-center sm:text-left text-xs sm:text-sm">The Open University of Sri Lanka</span>
             </div>
-            <div className="flex items-center gap-4">
-              <span>Last updated: {currentTime.toLocaleTimeString()}</span>
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+              <span className="text-xs sm:text-sm">Last updated: {currentTime.toLocaleTimeString()}</span>
               <div className="flex items-center gap-1">
                 <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                <span>System Online</span>
+                <span className="text-xs sm:text-sm">System Online</span>
               </div>
             </div>
           </div>

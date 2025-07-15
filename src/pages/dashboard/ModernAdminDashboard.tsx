@@ -325,34 +325,34 @@ const ModernAdminDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-2">Admin Control Center 🛡️</h1>
-            <p className="text-indigo-100 mb-4">
+      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-4 md:p-6 text-white">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-xl md:text-2xl font-bold mb-2">Admin Control Center 🛡️</h1>
+            <p className="text-indigo-100 mb-4 text-sm md:text-base">
               Monitor and manage the entire I-Team Society system
             </p>
-            <div className="flex items-center gap-4">
-              <Badge className="bg-white/20 text-white border-white/30">
+            <div className="flex flex-wrap items-center gap-2 md:gap-4">
+              <Badge className="bg-white/20 text-white border-white/30 text-xs md:text-sm">
                 {stats.totalUsers} Total Users
               </Badge>
-              <Badge className="bg-white/20 text-white border-white/30">
-                Rs. {stats.totalRevenue.toLocaleString()} Revenue
+              <Badge className="bg-white/20 text-white border-white/30 text-xs md:text-sm">
+                Rs. {stats.totalRevenue?.toLocaleString() || '0'} Revenue
               </Badge>
-              <Badge className="bg-white/20 text-white border-white/30">
+              <Badge className="bg-white/20 text-white border-white/30 text-xs md:text-sm">
                 {stats.systemHealth.uptime}% Uptime
               </Badge>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold">{stats.activeMemberships}</div>
-            <div className="text-indigo-100">Active Members</div>
+          <div className="text-center lg:text-right">
+            <div className="text-2xl md:text-3xl font-bold">{stats.activeMemberships}</div>
+            <div className="text-indigo-100 text-sm md:text-base">Active Members</div>
           </div>
         </div>
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -398,10 +398,10 @@ const ModernAdminDashboard = () => {
                   Total Revenue
                 </p>
                 <p className="text-2xl font-bold text-purple-900">
-                  Rs. {(stats.totalRevenue / 1000).toFixed(1)}K
+                  Rs. {stats.totalRevenue ? (stats.totalRevenue / 1000).toFixed(1) : '0'}K
                 </p>
                 <p className="text-xs text-purple-600">
-                  Rs. {stats.monthlyRevenue.toLocaleString()} this month
+                  Rs. {stats.monthlyRevenue?.toLocaleString() || '0'} this month
                 </p>
               </div>
               <DollarSign className="h-8 w-8 text-purple-600" />
@@ -429,7 +429,7 @@ const ModernAdminDashboard = () => {
       </div>
 
       {/* Charts and Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Revenue Trends */}
         <Card>
           <CardHeader>
@@ -440,33 +440,43 @@ const ModernAdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={stats.revenueTrends}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip />
-                  <Area
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="revenue"
-                    stackId="1"
-                    stroke="#10B981"
-                    fill="#10B981"
-                    fillOpacity={0.6}
-                  />
-                  <Area
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="members"
-                    stackId="2"
-                    stroke="#3B82F6"
-                    fill="#3B82F6"
-                    fillOpacity={0.6}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {stats.revenueTrends && stats.revenueTrends.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={stats.revenueTrends}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" />
+                    <Tooltip />
+                    <Area
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="revenue"
+                      stackId="1"
+                      stroke="#10B981"
+                      fill="#10B981"
+                      fillOpacity={0.6}
+                    />
+                    <Area
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="members"
+                      stackId="2"
+                      stroke="#3B82F6"
+                      fill="#3B82F6"
+                      fillOpacity={0.6}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <div className="text-center">
+                    <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p>No revenue data available yet</p>
+                    <p className="text-sm">Data will appear as payments are processed</p>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -481,24 +491,34 @@ const ModernAdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.membershipTrends}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="bronze" stackId="a" fill="#F59E0B" />
-                  <Bar dataKey="silver" stackId="a" fill="#6B7280" />
-                  <Bar dataKey="gold" stackId="a" fill="#F59E0B" />
-                </BarChart>
-              </ResponsiveContainer>
+              {stats.membershipTrends && stats.membershipTrends.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.membershipTrends}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="bronze" stackId="a" fill="#CD7F32" />
+                    <Bar dataKey="silver" stackId="a" fill="#C0C0C0" />
+                    <Bar dataKey="gold" stackId="a" fill="#FFD700" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <div className="text-center">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p>No membership data available yet</p>
+                    <p className="text-sm">Data will appear as memberships are created</p>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* System Status and Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* System Health */}
         <Card>
           <CardHeader>

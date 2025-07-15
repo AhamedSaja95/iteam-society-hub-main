@@ -277,33 +277,33 @@ const ModernStudentDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 rounded-2xl p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-2">Welcome back! 👋</h1>
-            <p className="text-blue-100 mb-4">
+      <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 rounded-2xl p-4 md:p-6 text-white">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-xl md:text-2xl font-bold mb-2">Welcome back! 👋</h1>
+            <p className="text-blue-100 mb-4 text-sm md:text-base">
               Ready to continue your learning journey?
             </p>
-            <div className="flex items-center gap-4">
-              <Badge className="bg-white/20 text-white border-white/30">
+            <div className="flex flex-wrap items-center gap-2 md:gap-4">
+              <Badge className="bg-white/20 text-white border-white/30 text-xs md:text-sm">
                 {stats.membershipTier.charAt(0).toUpperCase() +
                   stats.membershipTier.slice(1)}{" "}
                 Member
               </Badge>
-              <Badge className="bg-white/20 text-white border-white/30">
+              <Badge className="bg-white/20 text-white border-white/30 text-xs md:text-sm">
                 {stats.eventsAttended} Events Attended
               </Badge>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold">{stats.attendanceRate}%</div>
-            <div className="text-blue-100">Attendance Rate</div>
+          <div className="text-center lg:text-right">
+            <div className="text-2xl md:text-3xl font-bold">{stats.attendanceRate}%</div>
+            <div className="text-blue-100 text-sm md:text-base">Attendance Rate</div>
           </div>
         </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -370,9 +370,9 @@ const ModernStudentDashboard = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="xl:col-span-2 space-y-6">
           {/* Progress Tracking */}
           <Card>
             <CardHeader>
@@ -414,7 +414,7 @@ const ModernStudentDashboard = () => {
                 </div>
                 {stats.membershipStatus === "active" && (
                   <div className="text-xs text-gray-500">
-                    {stats.membershipDaysLeft} days remaining
+                    {stats.membershipDaysLeft || 0} days remaining
                   </div>
                 )}
               </div>

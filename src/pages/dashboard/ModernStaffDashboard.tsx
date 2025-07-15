@@ -253,33 +253,33 @@ const ModernStaffDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 rounded-2xl p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-2">Staff Dashboard 🚀</h1>
-            <p className="text-purple-100 mb-4">
+      <div className="bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 rounded-2xl p-4 md:p-6 text-white">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-xl md:text-2xl font-bold mb-2">Staff Dashboard 🚀</h1>
+            <p className="text-purple-100 mb-4 text-sm md:text-base">
               Manage events and track your impact
             </p>
-            <div className="flex items-center gap-4">
-              <Badge className="bg-white/20 text-white border-white/30">
+            <div className="flex flex-wrap items-center gap-2 md:gap-4">
+              <Badge className="bg-white/20 text-white border-white/30 text-xs md:text-sm">
                 {stats.membershipTier.charAt(0).toUpperCase() +
                   stats.membershipTier.slice(1)}{" "}
                 Member
               </Badge>
-              <Badge className="bg-white/20 text-white border-white/30">
+              <Badge className="bg-white/20 text-white border-white/30 text-xs md:text-sm">
                 {stats.eventsCreated} Events Created
               </Badge>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold">{stats.totalParticipants}</div>
-            <div className="text-purple-100">Total Participants</div>
+          <div className="text-center lg:text-right">
+            <div className="text-2xl md:text-3xl font-bold">{stats.totalParticipants}</div>
+            <div className="text-purple-100 text-sm md:text-base">Total Participants</div>
           </div>
         </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -364,9 +364,9 @@ const ModernStaffDashboard = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="xl:col-span-2 space-y-6">
           {/* Performance Overview */}
           <Card>
             <CardHeader>
@@ -376,7 +376,7 @@ const ModernStaffDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
                   <div className="text-2xl font-bold text-blue-700">
                     {stats.performanceMetrics.thisMonth.eventsCreated}

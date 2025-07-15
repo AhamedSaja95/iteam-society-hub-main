@@ -40,6 +40,9 @@ const Events = () => {
     requirements: "",
     contact_info: "",
   });
+  const [bannerImage, setBannerImage] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Fetch events with proper error handling
   const { data: events = [], isLoading } = useQuery({
@@ -309,8 +312,27 @@ const Events = () => {
 
         {/* Upcoming Events Tab */}
         <TabsContent value="upcoming" className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {upcomingEvents.map((event) => {
+          {upcomingEvents.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="mx-auto h-24 w-24 text-gray-400 mb-4">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0V6a2 2 0 012-2h4a2 2 0 012 2v1m-6 0h8m-8 0H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-2" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
+              <p className="text-gray-500 mb-4">There are no upcoming events at the moment. Check back later!</p>
+              {(role === "admin" || role === "staff") && (
+                <Button
+                  className="bg-iteam-primary"
+                  onClick={() => setIsCreateDialogOpen(true)}
+                >
+                  Create First Event
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {upcomingEvents.map((event) => {
               const isRegistered = event.event_registrations.some(
                 (reg) => reg.user_id === user.id
               );
@@ -376,7 +398,8 @@ const Events = () => {
                 </Card>
               );
             })}
-          </div>
+            </div>
+          )}
         </TabsContent>
 
         {/* My Events Tab */}
@@ -434,44 +457,55 @@ const Events = () => {
 
         {/* Past Events Tab */}
         <TabsContent value="past" className="pt-6">
-          <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-            <table className="min-w-full divide-y divide-gray-300">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th
-                    scope="col"
-                    className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900"
-                  >
-                    Event Name
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                  >
-                    Date
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                  >
-                    Location
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                  >
-                    Attendance
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900"
-                  >
-                    Certificate
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {pastEvents.map((event) => {
+          {pastEvents.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="mx-auto h-24 w-24 text-gray-400 mb-4">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No past events</h3>
+              <p className="text-gray-500">You haven't attended any events yet. Check out upcoming events to get started!</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+              <table className="min-w-full divide-y divide-gray-300">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th
+                      scope="col"
+                      className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900"
+                    >
+                      Event Name
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                    >
+                      Date
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                    >
+                      Location
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                    >
+                      Attendance
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900"
+                    >
+                      Certificate
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {pastEvents.map((event) => {
                   const registration = event.event_registrations.find(
                     (reg) => reg.user_id === user.id
                   );
@@ -515,7 +549,8 @@ const Events = () => {
                 })}
               </tbody>
             </table>
-          </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
