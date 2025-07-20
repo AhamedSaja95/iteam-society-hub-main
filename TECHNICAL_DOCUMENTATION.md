@@ -332,10 +332,39 @@ const trackEvent = (eventName: string, properties: object) => {
 };
 ```
 
+## 📞 Phone Number Handling
+
+### No-Validation Policy
+- **Core Principle**: Phone numbers are accepted in ANY format without validation
+- **Storage**: Raw strings stored unchanged in database
+- **Forms**: No format restrictions on Contact, Registration, and Profile forms
+- **User Experience**: Prevents form submission blocking due to format issues
+- **International Support**: All international and local phone formats accepted
+
+### Implementation Details
+```typescript
+// Example: Form validation excludes phone validation
+export const validateFormSubmission = (formData: FormData) => {
+  // IMPORTANT: No phone number validation - accepts any format
+  // Phone numbers stored as raw strings to prevent blocking
+  return { isValid: true, errors: [] };
+};
+```
+
+### Supported Formats
+- International: `+94712345678`, `+1-234-567-8900`
+- Local: `071-234-5678`, `011 288 1000`
+- Any format: `123`, `invalid phone`, `+`, empty strings
+
+### Documentation
+See `docs/PHONE_NUMBER_HANDLING.md` for complete implementation details.
+
+---
+
 ## 🛡️ Security Considerations
 
 ### Data Protection
-- Input validation and sanitization
+- Input validation and sanitization (except phone numbers)
 - SQL injection prevention
 - XSS protection
 - CSRF protection

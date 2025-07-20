@@ -30,6 +30,7 @@ The I-Team Society Management System is a comprehensive web application designed
 **Process**:
 1. Click "Register as Student" from the main registration page
 2. Fill in basic information (name, email, phone, password)
+   - **Phone Number**: Enter in any format you prefer (local, international, with/without spaces)
 3. Complete student details (student ID, degree, level)
 4. Upload payment slip (image or PDF)
 5. Upload profile photo (optional)
