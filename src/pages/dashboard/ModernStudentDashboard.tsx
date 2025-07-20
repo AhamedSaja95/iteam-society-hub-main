@@ -26,7 +26,9 @@ import {
   Download,
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import LoadingSkeleton, { LoadingSpinner, EmptyState, ErrorState } from "@/components/ui/LoadingSkeleton";
+import { useLoadingState } from "@/hooks/useLoadingState";
+import DataFetcher from "@/components/ui/DataFetcher";
 
 interface StudentStats {
   eventsRegistered: number;
@@ -63,6 +65,7 @@ const ModernStudentDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<StudentStats>({
     eventsRegistered: 0,
     eventsAttended: 0,
@@ -75,6 +78,10 @@ const ModernStudentDashboard = () => {
     recentActivities: [],
     upcomingDeadlines: [],
   });
+
+  // Derived booleans for better state management
+  const hasUser = !!user?.id;
+  const hasData = stats.eventsRegistered > 0 || stats.recentActivities.length > 0 || stats.achievements.length > 0;
 
   const fetchStudentData = async () => {
     console.log('🎓 ModernStudentDashboard: fetchStudentData called', {
@@ -289,12 +296,24 @@ const ModernStudentDashboard = () => {
     }
   }, [user?.id]); // Only depend on user.id, not the entire user object
 
-  if (loading) {
-    return <LoadingSkeleton variant="dashboard" />;
-  }
-
   return (
-    <div className="space-y-6">
+    <DataFetcher
+      loading={loading}
+      error={error}
+      data={hasData ? stats : null}
+      loadingMessage="Loading student dashboard..."
+      emptyStateConfig={{
+        title: "No User Data",
+        description: "Please log in as a student to see your dashboard",
+        variant: "no-auth"
+      }}
+      errorStateConfig={{
+        title: "Failed to Load Dashboard",
+        description: "There was an error loading your data"
+      }}
+      onRetry={() => window.location.reload()}
+    >
+      <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 rounded-2xl p-4 md:p-6 text-white">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -618,6 +637,7 @@ const ModernStudentDashboard = () => {
         </div>
       </div>
     </div>
+    </DataFetcher>
   );
 };
 

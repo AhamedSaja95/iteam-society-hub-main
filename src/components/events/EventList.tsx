@@ -7,6 +7,7 @@ import { toast } from '@/components/ui/sonner';
 import { Calendar, Clock, MapPin, Users, Edit, Trash2, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { LoadingSpinner, EmptyState, ErrorState } from '@/components/ui/LoadingSkeleton';
 
 interface Event {
   id: string;
@@ -38,14 +39,37 @@ const EventList: React.FC<EventListProps> = ({
 }) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const { user, loading: authLoading } = useAuth();
+
+  // Derived booleans for better state management
+  const hasUser = !!user?.id;
+  const isAuthenticating = authLoading;
+  const isLoadingData = loading;
+  const hasEvents = events.length > 0;
+  const hasError = !!error;
 
   useEffect(() => {
     fetchEvents();
   }, [user]);
 
   const fetchEvents = async () => {
+    console.log('📅 EventList: fetchEvents called', {
+      user,
+      hasUser,
+      isAuthenticating
+    });
+
+    // Don't fetch if still authenticating
+    if (isAuthenticating) {
+      console.log('📅 EventList: Still authenticating, waiting...');
+      return;
+    }
+
     try {
+      setLoading(true);
+      setError(null);
+      
       let query = supabase
         .from('events')
         .select(`
@@ -61,12 +85,12 @@ const EventList: React.FC<EventListProps> = ({
 
       if (error) throw error;
 
-      // Check if user is registered for each event
+      // Check if user is registered for each event (only if user exists)
       const eventsWithRegistration = await Promise.all(
         (data || []).map(async (event) => {
           let userRegistered = false;
           
-          if (user) {
+          if (hasUser) {
             const { data: registration } = await supabase
               .from('event_registrations')
               .select('id')
@@ -86,8 +110,10 @@ const EventList: React.FC<EventListProps> = ({
       );
 
       setEvents(eventsWithRegistration);
-    } catch (error) {
-      console.error('Error fetching events:', error);
+      console.log('✅ EventList: Events loaded successfully', { count: eventsWithRegistration.length });
+    } catch (error: any) {
+      console.error('❌ EventList: Error fetching events:', error);
+      setError(error.message || 'Failed to load events');
       toast.error('Failed to load events');
     } finally {
       setLoading(false);
@@ -179,18 +205,59 @@ const EventList: React.FC<EventListProps> = ({
     }
   };
 
-  if (loading) {
-    return <div className="flex justify-center p-8">Loading events...</div>;
+  // Determine rendering states using derived booleans
+  const shouldShowLoading = isAuthenticating || (isLoadingData);
+  const shouldShowError = hasError && !shouldShowLoading;
+  const shouldShowEmpty = !hasUser && !isAuthenticating;
+  const shouldShowNoEvents = !shouldShowLoading && !hasError && !hasEvents;
+  const shouldShowEvents = !shouldShowLoading && !hasError && hasEvents;
+
+  // Show loading state
+  if (shouldShowLoading) {
+    return <LoadingSpinner message="Loading events..." />;
   }
 
-  if (events.length === 0) {
+  // Show error state
+  if (shouldShowError) {
     return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <p className="text-gray-500">No events available</p>
-        </CardContent>
-      </Card>
+      <ErrorState
+        title="Failed to load events"
+        description="There was an error loading the events list"
+        error={error}
+        onRetry={() => fetchEvents()}
+      />
     );
+  }
+
+  // Show empty state for unauthenticated users
+  if (shouldShowEmpty) {
+    return (
+      <EmptyState
+        variant="no-auth"
+        title="Authentication Required"
+        description="Please log in to view and register for events"
+        action={{
+          label: "Go to Login",
+          onClick: () => window.location.href = '/login'
+        }}
+      />
+    );
+  }
+
+  // Show no events state
+  if (shouldShowNoEvents) {
+    return (
+      <EmptyState
+        title="No Events Available"
+        description="There are currently no events scheduled. Check back later!"
+        icon={<Calendar className="h-12 w-12 text-muted-foreground" />}
+      />
+    );
+  }
+
+  // Show events if we have them
+  if (!shouldShowEvents) {
+    return null;
   }
 
   return (

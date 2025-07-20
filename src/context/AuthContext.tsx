@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { resetAuth } from "@/utils/authCleanup";
@@ -87,23 +87,30 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('🔍 AuthContext: Fetching role for user:', newSession.user.id);
         // Fetch role for the user with error handling and timeout
         try {
+          // Increase timeout to 10 seconds and add more robust error handling
           const rolePromise = fetchUserRole(newSession.user.id);
-          const roleTimeout = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Role fetch timeout')), 5000)
+          const roleTimeout = new Promise((resolve) => 
+            setTimeout(() => {
+              console.warn('⚠️ AuthContext: Role fetch timeout, continuing without role');
+              resolve(null); // Resolve with null instead of rejecting
+            }, 10000)
           );
           
           const userRole = await Promise.race([rolePromise, roleTimeout]);
           
-          if (mounted && userRole) {
-            setRole(userRole);
-            console.log('✅ AuthContext: Role set to:', userRole);
-          } else if (mounted && !userRole) {
-            console.warn('⚠️ AuthContext: No role found for user');
-            setRole(null);
+          if (mounted) {
+            if (userRole) {
+              setRole(userRole);
+              console.log('✅ AuthContext: Role set to:', userRole);
+            } else {
+              console.warn('⚠️ AuthContext: No role found for user, continuing without role');
+              setRole(null);
+            }
           }
         } catch (error) {
           console.error('❌ AuthContext: Error fetching role:', error);
           if (mounted) {
+            console.warn('⚠️ AuthContext: Continuing without role due to error');
             setRole(null);
           }
         }
@@ -169,7 +176,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       console.log('🚪 AuthContext: Starting sign out process...');
       // Use comprehensive auth cleanup that handles all cached data
@@ -180,10 +187,26 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Even if there's an error, ensure user is signed out
       await supabase.auth.signOut();
     }
-  };
+  }, []); // No dependencies - function is stable
+
+  // Memoize context value with stable primitives to prevent object identity thrash on Hot/Fast Refresh
+  const contextValue = useMemo(() => ({
+    user,
+    session,
+    role,
+    loading,
+    signOut,
+  }), [
+    user?.id,    // Use stable primitive (id) instead of full user object
+    user?.email, // Use stable primitive (email) instead of full user object
+    session?.access_token, // Use stable primitive (token) instead of full session object
+    role,
+    loading,
+    signOut
+  ]);
 
   return (
-    <AuthContext.Provider value={{ user, session, role, loading, signOut }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

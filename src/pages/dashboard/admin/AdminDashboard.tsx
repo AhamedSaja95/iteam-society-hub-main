@@ -28,6 +28,8 @@ import {
   Cell,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLoadingState } from "@/hooks/useLoadingState";
+import { LoadingSpinner, EmptyState, ErrorState } from "@/components/ui/LoadingSkeleton";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import {
@@ -47,21 +49,34 @@ const AdminDashboard = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [refreshEvents, setRefreshEvents] = useState(0);
 
-  const { data: users = [], isLoading: usersLoading } = useQuery({
+  const { data: users = [], isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ["users"],
     queryFn: UserService.getAllUsers,
   });
-  const { data: memberships = [], isLoading: membershipsLoading } = useQuery({
+  const { data: memberships = [], isLoading: membershipsLoading, error: membershipsError } = useQuery({
     queryKey: ["memberships"],
     queryFn: MembershipService.getAllMemberships,
   });
-  const { data: payments = [], isLoading: paymentsLoading } = useQuery({
+  const { data: payments = [], isLoading: paymentsLoading, error: paymentsError } = useQuery({
     queryKey: ["payments"],
     queryFn: PaymentService.getAllPayments,
   });
-  const { data: events = [], isLoading: eventsLoading } = useQuery({
+  const { data: events = [], isLoading: eventsLoading, error: eventsError } = useQuery({
     queryKey: ["events"],
     queryFn: EventService.getAllEvents,
+  });
+
+  // Derived booleans for loading state management
+  const isLoading = usersLoading || membershipsLoading || paymentsLoading || eventsLoading;
+  const hasError = usersError || membershipsError || paymentsError || eventsError;
+  const hasData = users.length > 0 || memberships.length > 0 || payments.length > 0 || events.length > 0;
+  
+  // Use the loading state hook
+  const loadingState = useLoadingState({
+    isLoading,
+    error: hasError ? 'Failed to load dashboard data' : null,
+    data: { users, memberships, payments, events },
+    requiresAuth: true
   });
 
   const stats = {
@@ -123,30 +138,33 @@ const AdminDashboard = () => {
     )
     .slice(0, 5);
 
-  if (usersLoading || membershipsLoading || paymentsLoading || eventsLoading) {
+  // Handle different states using the loading state hook
+  if (loadingState.shouldShowLoading) {
+    return <LoadingSpinner message="Loading admin dashboard..." />;
+  }
+
+  if (loadingState.shouldShowEmpty) {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-4 w-[120px]" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-[60px]" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-4 w-[200px]" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-[300px] w-full" />
-          </CardContent>
-        </Card>
-      </div>
+      <EmptyState
+        variant="no-auth"
+        title="Authentication Required"
+        description="Please log in as an admin to access the dashboard"
+        action={{
+          label: "Go to Login",
+          onClick: () => window.location.href = '/login'
+        }}
+      />
+    );
+  }
+
+  if (loadingState.shouldShowError) {
+    return (
+      <ErrorState
+        title="Failed to Load Dashboard"
+        description="There was an error loading the admin dashboard data"
+        error={hasError ? 'Multiple data sources failed to load' : null}
+        onRetry={() => window.location.reload()}
+      />
     );
   }
 

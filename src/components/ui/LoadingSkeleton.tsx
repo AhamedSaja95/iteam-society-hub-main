@@ -1,6 +1,8 @@
 import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { AlertCircle, Users, Calendar, RefreshCw, LogIn, User } from 'lucide-react';
 
 interface LoadingSkeletonProps {
   className?: string;
@@ -130,6 +132,146 @@ const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   };
 
   return <>{renderSkeleton()}</>;
+};
+
+// Empty State Component
+interface EmptyStateProps {
+  title?: string;
+  description?: string;
+  icon?: React.ReactNode;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+  className?: string;
+  variant?: 'no-auth' | 'no-data' | 'no-results';
+}
+
+export const EmptyState: React.FC<EmptyStateProps> = ({
+  title,
+  description,
+  icon,
+  action,
+  className,
+  variant = 'no-data'
+}) => {
+  const getDefaultContent = () => {
+    switch (variant) {
+      case 'no-auth':
+        return {
+          icon: <User className="h-12 w-12 text-muted-foreground" />,
+          title: 'Authentication Required',
+          description: 'Please log in to access this content'
+        };
+      case 'no-results':
+        return {
+          icon: <Calendar className="h-12 w-12 text-muted-foreground" />,
+          title: 'No Results Found',
+          description: 'Try adjusting your search or filters'
+        };
+      case 'no-data':
+      default:
+        return {
+          icon: <Users className="h-12 w-12 text-muted-foreground" />,
+          title: 'No Data Available',
+          description: 'There is no data to display at the moment'
+        };
+    }
+  };
+
+  const defaultContent = getDefaultContent();
+
+  return (
+    <Card className={cn('border-dashed', className)}>
+      <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="mb-4">
+          {icon || defaultContent.icon}
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          {title || defaultContent.title}
+        </h3>
+        <p className="text-gray-500 mb-6 max-w-md">
+          {description || defaultContent.description}
+        </p>
+        {action && (
+          <Button onClick={action.onClick} variant="outline">
+            {action.label}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// Error State Component
+interface ErrorStateProps {
+  title?: string;
+  description?: string;
+  error?: string;
+  onRetry?: () => void;
+  className?: string;
+}
+
+export const ErrorState: React.FC<ErrorStateProps> = ({
+  title = 'Something went wrong',
+  description = 'An error occurred while loading the data',
+  error,
+  onRetry,
+  className
+}) => {
+  return (
+    <Card className={cn('border-red-200 bg-red-50', className)}>
+      <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+        <h3 className="text-lg font-semibold text-red-900 mb-2">
+          {title}
+        </h3>
+        <p className="text-red-700 mb-4">
+          {description}
+        </p>
+        {error && (
+          <p className="text-sm text-red-600 mb-6 font-mono bg-red-100 p-2 rounded max-w-md">
+            {error}
+          </p>
+        )}
+        {onRetry && (
+          <Button onClick={onRetry} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// Loading Spinner Component
+interface LoadingSpinnerProps {
+  message?: string;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}
+
+export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
+  message = 'Loading...',
+  size = 'md',
+  className
+}) => {
+  const sizeClasses = {
+    sm: 'h-6 w-6',
+    md: 'h-12 w-12',
+    lg: 'h-16 w-16'
+  };
+
+  return (
+    <div className={cn('flex flex-col items-center justify-center py-12', className)}>
+      <div className={cn(
+        'animate-spin rounded-full border-2 border-gray-300 border-t-blue-600 mb-4',
+        sizeClasses[size]
+      )} />
+      <p className="text-gray-600 text-sm">{message}</p>
+    </div>
+  );
 };
 
 export default LoadingSkeleton;
