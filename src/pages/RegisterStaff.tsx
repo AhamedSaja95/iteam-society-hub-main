@@ -189,7 +189,12 @@ const RegisterStaff = () => {
           })
           .eq("id", authData.user.id);
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Missing role, signing out', profileError);
+          await supabase.auth.signOut();
+          window.location.href = '/login?error=missing-role';
+          return;
+        }
 
         // Create membership record
         const membershipAmount =

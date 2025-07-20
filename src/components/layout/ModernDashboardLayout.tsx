@@ -67,12 +67,6 @@ interface MenuItem {
 const getNavigationItems = (userRole: string, notifications: number = 0): MenuItem[] => {
   const baseItems: MenuItem[] = [
     {
-      icon: <Home size={20} />,
-      label: "Dashboard",
-      title: "Dashboard",
-      href: "/dashboard",
-    },
-    {
       icon: <User size={20} />,
       label: "My Profile",
       title: "My Profile",
@@ -102,20 +96,13 @@ const getNavigationItems = (userRole: string, notifications: number = 0): MenuIt
 
   if (userRole === "student") {
     return [
-      ...baseItems,
       {
-        icon: <LayoutDashboard size={20} />,
-        label: "Modern Dashboard",
-        title: "Modern Dashboard",
+        icon: <Home size={20} />,
+        label: "Dashboard",
+        title: "Dashboard",
         href: "/dashboard/modern-student",
-        badge: "New",
       },
-      {
-        icon: <Activity size={20} />,
-        label: "Real-Time Dashboard",
-        title: "Real-Time Dashboard",
-        href: "/dashboard/realtime-student",
-      },
+      ...baseItems,
       {
         icon: <Award size={20} />,
         label: "My Achievements",
@@ -127,20 +114,13 @@ const getNavigationItems = (userRole: string, notifications: number = 0): MenuIt
 
   if (userRole === "staff") {
     return [
-      ...baseItems,
       {
-        icon: <LayoutDashboard size={20} />,
-        label: "Modern Dashboard",
-        title: "Modern Dashboard",
+        icon: <Home size={20} />,
+        label: "Dashboard",
+        title: "Dashboard",
         href: "/dashboard/modern-staff",
-        badge: "New",
       },
-      {
-        icon: <Activity size={20} />,
-        label: "Real-Time Dashboard",
-        title: "Real-Time Dashboard",
-        href: "/dashboard/realtime-staff",
-      },
+      ...baseItems,
       {
         icon: <Plus size={20} />,
         label: "Create Event",
@@ -158,14 +138,13 @@ const getNavigationItems = (userRole: string, notifications: number = 0): MenuIt
 
   if (userRole === "admin") {
     return [
-      ...baseItems,
       {
-        icon: <LayoutDashboard size={20} />,
-        label: "Modern Dashboard",
-        title: "Modern Dashboard",
+        icon: <Home size={20} />,
+        label: "Dashboard",
+        title: "Dashboard",
         href: "/dashboard/admin/modern",
-        badge: "New",
       },
+      ...baseItems,
       {
         icon: <Shield size={20} />,
         label: "Admin Panel",
@@ -200,7 +179,15 @@ const getNavigationItems = (userRole: string, notifications: number = 0): MenuIt
     ];
   }
 
-  return baseItems;
+  return [
+    {
+      icon: <Home size={20} />,
+      label: "Dashboard",
+      title: "Dashboard",
+      href: "/dashboard",
+    },
+    ...baseItems
+  ];
 };
 
 interface ModernSidebarProps {
@@ -415,7 +402,7 @@ const ModernSidebar = ({
                   </span>
                 </div>
                 <p className="text-xs text-blue-700">
-                  Use the real-time dashboard for live updates and analytics!
+                  Your modern dashboard provides comprehensive insights and analytics!
                 </p>
               </CardContent>
             </Card>

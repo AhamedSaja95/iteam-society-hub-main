@@ -100,7 +100,12 @@ const Profile = () => {
         .eq("id", user?.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Missing role, signing out', profileError);
+        await supabase.auth.signOut();
+        window.location.href = '/login?error=missing-role';
+        return;
+      }
       setProfile(profileData);
 
       // Fetch role-specific details

@@ -4,15 +4,26 @@ import userEvent from '@testing-library/user-event'
 import { render, mockSupabaseSuccess, mockSupabaseError } from '@/test/utils'
 import Login from '../Login'
 import { supabase } from '@/integrations/supabase/client'
+import { toast } from '@/components/ui/sonner'
 
 vi.mock('@/integrations/supabase/client')
+vi.mock('@/components/ui/sonner')
 
 const mockNavigate = vi.fn()
+const mockLocation = {
+  state: null,
+  search: '',
+  pathname: '/login',
+  hash: '',
+  key: 'test-key',
+}
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
+    useLocation: () => mockLocation,
     Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
       <a href={to}>{children}</a>
     ),
@@ -332,5 +343,101 @@ describe('Login Component', () => {
     await waitFor(() => {
       expect(supabase.auth.signInWithPassword).toHaveBeenCalled()
     })
+  })
+
+  it('should handle profileError response, signOut, redirect and display toast message', async () => {
+    const mockUser = {
+      id: 'user-123',
+      email: 'test@example.com',
+    }
+
+    // Mock successful authentication
+    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue(
+      mockSupabaseSuccess({
+        user: mockUser,
+        session: { access_token: 'token' },
+      })
+    )
+
+    // Mock profile query to return error
+    const profileError = { message: 'Profile not found', code: 'PGRST116' }
+    const mockQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: null,
+        error: profileError,
+      }),
+    }
+    vi.mocked(supabase.from).mockReturnValue(mockQuery as any)
+
+    render(<Login />)
+
+    const emailInput = screen.getByLabelText(/email/i)
+    const passwordInput = screen.getByLabelText(/password/i)
+    const submitButton = screen.getByRole('button', { name: /sign in/i })
+
+    await user.type(emailInput, 'test@example.com')
+    await user.type(passwordInput, 'password123')
+    await user.click(submitButton)
+
+    await waitFor(() => {
+      // Assert supabase.auth.signInWithPassword was called
+      expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        password: 'password123',
+      })
+      
+      // Assert profile query was made
+      expect(supabase.from).toHaveBeenCalledWith('profiles')
+      expect(mockQuery.select).toHaveBeenCalledWith('role')
+      expect(mockQuery.eq).toHaveBeenCalledWith('id', 'user-123')
+      
+      // Assert supabase.auth.signOut was called due to profile error
+      expect(supabase.auth.signOut).toHaveBeenCalledTimes(1)
+      
+      // Assert redirect to /login occurred with error state
+      expect(mockNavigate).toHaveBeenCalledWith('/login', { 
+        state: { error: 'missing-role' } 
+      })
+    })
+  })
+
+  it('should display toast error message when redirected with missing-role error', () => {
+    const mockToast = vi.fn()
+    vi.mock('@/components/ui/sonner', () => ({
+      toast: {
+        error: mockToast,
+        success: vi.fn(),
+      },
+    }))
+
+    // Mock useLocation to return error state
+    const mockLocation = {
+      state: { error: 'missing-role' },
+      search: '',
+      pathname: '/login',
+      hash: '',
+      key: 'test-key',
+    }
+    
+    vi.mock('react-router-dom', async () => {
+      const actual = await vi.importActual('react-router-dom')
+      return {
+        ...actual,
+        useNavigate: () => mockNavigate,
+        useLocation: () => mockLocation,
+        Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+          <a href={to}>{children}</a>
+        ),
+      }
+    })
+
+    render(<Login />)
+
+    // The toast should be called with the appropriate error message
+    expect(mockToast).toHaveBeenCalledWith(
+      'Login failed: no role information found. Please try again or contact support.'
+    )
   })
 })

@@ -330,10 +330,20 @@ const ModernAdminDashboard = () => {
   };
 
   useEffect(() => {
-    fetchAdminData();
-    const interval = setInterval(fetchAdminData, 30000);
-    return () => clearInterval(interval);
-  }, [user]);
+    console.log('🛡️ ModernAdminDashboard: useEffect triggered', {
+      user: user,
+      userId: user?.id,
+      hasUser: !!user
+    });
+    if (user?.id) {
+      fetchAdminData();
+      const interval = setInterval(fetchAdminData, 30000);
+      return () => clearInterval(interval);
+    } else {
+      console.log('🛡️ ModernAdminDashboard: No user ID, skipping data fetch');
+      setLoading(false);
+    }
+  }, [user?.id]); // Only depend on user.id
 
   if (loading) {
     return <LoadingSkeleton variant="dashboard" />;

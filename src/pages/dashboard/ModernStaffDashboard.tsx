@@ -236,10 +236,20 @@ const ModernStaffDashboard = () => {
   };
 
   useEffect(() => {
-    fetchStaffData();
-    const interval = setInterval(fetchStaffData, 30000);
-    return () => clearInterval(interval);
-  }, [user]);
+    console.log('🎯 ModernStaffDashboard: useEffect triggered', {
+      user: user,
+      userId: user?.id,
+      hasUser: !!user
+    });
+    if (user?.id) {
+      fetchStaffData();
+      const interval = setInterval(fetchStaffData, 30000);
+      return () => clearInterval(interval);
+    } else {
+      console.log('🎯 ModernStaffDashboard: No user ID, skipping data fetch');
+      setLoading(false);
+    }
+  }, [user?.id]); // Only depend on user.id
 
   if (loading) {
     return <LoadingSkeleton variant="dashboard" />;

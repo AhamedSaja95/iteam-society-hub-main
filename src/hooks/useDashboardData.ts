@@ -89,7 +89,16 @@ export const useDashboardData = () => {
       userType: typeof user,
       roleType: typeof role
     });
-    fetchData();
+    
+    // Only fetch data if we have a user ID
+    if (user?.id) {
+      fetchData();
+    } else {
+      console.log('🔍 useDashboardData: No user ID, clearing data and stopping loading');
+      setData(null);
+      setError(null);
+      setLoading(false);
+    }
   }, [user?.id, role]);
 
   // Refresh function for manual data refresh

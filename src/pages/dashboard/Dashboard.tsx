@@ -23,12 +23,18 @@ const Dashboard = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
+    console.log('🏠 Dashboard: useEffect triggered', {
+      user: user,
+      userId: user?.id,
+      hasUser: !!user
+    });
+    if (user?.id) {
       fetchUserRole();
     } else {
+      console.log('🏠 Dashboard: No user ID, stopping loading');
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]); // Only depend on user.id
 
   const fetchUserRole = async () => {
     try {
@@ -39,32 +45,51 @@ const Dashboard = () => {
         .eq("id", user?.id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Dashboard: Error fetching role:", error);
+        // If profile doesn't exist, create it first or redirect to profile setup
+        if (error.code === 'PGRST116') {
+          console.log("⚠️ Dashboard: No profile found, user needs to complete profile setup");
+          setError("Profile not found. Please complete your profile setup.");
+          setLoading(false);
+          return;
+        }
+        throw error;
+      }
 
-      const role = data?.role || null;
-      console.log("🎭 Dashboard: User role:", role);
+      const role = data?.role;
+      console.log("🎭 Dashboard: User role fetched:", role);
+      
+      if (!role) {
+        console.log("⚠️ Dashboard: No role assigned, showing fallback dashboard");
+        setError("No role assigned. Please contact support to set up your account.");
+        setUserRole(null);
+        setLoading(false);
+        return;
+      }
+
       setUserRole(role);
+      
+      // Small delay to ensure state is updated before navigation
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Auto-redirect to appropriate modern dashboard
+      // Auto-redirect to appropriate Modern Dashboard (Primary)
       if (role === "admin") {
-        console.log("🔄 Dashboard: Auto-redirecting admin to admin dashboard");
+        console.log("🔄 Dashboard: Auto-redirecting admin to Modern Admin Dashboard");
         navigate("/dashboard/admin/modern", { replace: true });
       } else if (role === "staff") {
-        console.log("🔄 Dashboard: Auto-redirecting staff to staff dashboard");
+        console.log("🔄 Dashboard: Auto-redirecting staff to Modern Staff Dashboard");
         navigate("/dashboard/modern-staff", { replace: true });
       } else if (role === "student") {
-        console.log("🔄 Dashboard: Auto-redirecting student to student dashboard");
-        console.log("🔄 Dashboard: Navigating to /dashboard/modern-student");
+        console.log("🔄 Dashboard: Auto-redirecting student to Modern Student Dashboard");
         navigate("/dashboard/modern-student", { replace: true });
-        console.log("🔄 Dashboard: Navigation completed");
       } else {
-        console.log("⚠️ Dashboard: No role found, showing fallback dashboard");
-        console.log("⚠️ Dashboard: Role value:", role, "Type:", typeof role);
-        setError("Unable to determine user role. Please contact support.");
+        console.log("⚠️ Dashboard: Unknown role, showing fallback dashboard:", role);
+        setError(`Unknown user role: ${role}. Please contact support.`);
       }
     } catch (error: any) {
-      console.error("❌ Dashboard: Error fetching user role:", error);
-      setError(error.message || "Failed to load dashboard");
+      console.error("❌ Dashboard: Error in fetchUserRole:", error);
+      setError(error.message || "Failed to load dashboard. Please try refreshing the page.");
     } finally {
       setLoading(false);
     }

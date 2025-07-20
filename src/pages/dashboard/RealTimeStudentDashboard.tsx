@@ -97,7 +97,12 @@ const RealTimeStudentDashboard = () => {
         .eq("id", user.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Missing role, signing out', profileError);
+        await supabase.auth.signOut();
+        window.location.href = '/login?error=missing-role';
+        return;
+      }
       setProfile(profileData);
 
       // Fetch membership data
@@ -202,10 +207,20 @@ const RealTimeStudentDashboard = () => {
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
-    fetchStudentData();
-    const interval = setInterval(fetchStudentData, 30000);
-    return () => clearInterval(interval);
-  }, [user]);
+    console.log('🔄 RealTimeStudentDashboard: useEffect triggered', {
+      user: user,
+      userId: user?.id,
+      hasUser: !!user
+    });
+    if (user?.id) {
+      fetchStudentData();
+      const interval = setInterval(fetchStudentData, 30000);
+      return () => clearInterval(interval);
+    } else {
+      console.log('🔄 RealTimeStudentDashboard: No user ID, skipping data fetch');
+      setLoading(false);
+    }
+  }, [user?.id]); // Only depend on user.id
 
   // Subscribe to real-time changes
   useEffect(() => {
@@ -263,7 +278,7 @@ const RealTimeStudentDashboard = () => {
     return () => {
       channels.forEach((channel) => supabase.removeChannel(channel));
     };
-  }, [user]);
+  }, [user?.id]);
 
   const handlePayment = () => {
     console.log("Redirect to payment");

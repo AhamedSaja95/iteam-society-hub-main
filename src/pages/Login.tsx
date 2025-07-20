@@ -32,6 +32,19 @@ const Login = () => {
   const registrationMessage = location.state?.message;
   const userType = location.state?.userType;
 
+  // Check for missing role error and display toast
+  React.useEffect(() => {
+    const errorFromState = location.state?.error;
+    const urlParams = new URLSearchParams(location.search);
+    const errorFromQuery = urlParams.get('error');
+    
+    const error = errorFromState || errorFromQuery;
+    
+    if (error === 'missing-role') {
+      toast.error('Login failed: no role information found. Please try again or contact support.');
+    }
+  }, [location.state?.error, location.search]);
+
   // If user is already logged in, redirect to dashboard
   React.useEffect(() => {
     if (user) {
@@ -65,10 +78,9 @@ const Login = () => {
         console.log("❌ Login: Profile error:", profileError);
 
         if (profileError) {
-          console.error("Error fetching user role:", profileError);
-          // Fallback to general dashboard if role fetch fails
-          toast.success("Logged in successfully!");
-          navigate("/dashboard");
+          console.error('Missing role, signing out', profileError);
+          await supabase.auth.signOut();
+          navigate('/login', { state: { error: 'missing-role' } });
           return;
         }
 

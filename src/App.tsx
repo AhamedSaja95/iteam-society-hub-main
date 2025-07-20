@@ -37,9 +37,14 @@ import Unauthorized from "./pages/Unauthorized";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import SearchResults from "./pages/dashboard/SearchResults";
+import { AuthCleanup } from "./utils/authCleanup";
+import AuthLoadingDebug from "./components/debug/AuthLoadingDebug";
 import "./utils/env-test";
 
 const queryClient = new QueryClient();
+
+// Register the QueryClient with AuthCleanup for proper cache management
+AuthCleanup.setQueryClient(queryClient);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -47,6 +52,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <AuthLoadingDebug />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -76,12 +82,14 @@ const App = () => (
                 <Route path="achievements" element={<Achievements />} />
                 <Route path="search" element={<SearchResults />} />
 
-                {/* Role-specific dashboards */}
+                {/* Role-specific Modern Dashboards - Primary */}
                 <Route
                   path="modern-student"
                   element={<ModernStudentDashboard />}
                 />
                 <Route path="modern-staff" element={<ModernStaffDashboard />} />
+
+                {/* Real-time Dashboards - Legacy support only */}
                 <Route
                   path="realtime-student"
                   element={<RealTimeStudentDashboard />}
@@ -94,7 +102,9 @@ const App = () => (
                 {/* Admin Routes */}
                 <Route path="admin">
                   <Route index element={<AdminDashboard />} />
+                  {/* Modern Admin Dashboard - Primary */}
                   <Route path="modern" element={<ModernAdminDashboard />} />
+                  {/* Real-time Admin Dashboard - Legacy support only */}
                   <Route path="realtime" element={<RealTimeAdminDashboard />} />
                   <Route path="users" element={<UserManagement />} />
                   <Route path="events" element={<EventManagement />} />

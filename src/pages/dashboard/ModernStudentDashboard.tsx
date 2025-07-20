@@ -279,10 +279,15 @@ const ModernStudentDashboard = () => {
       userId: user?.id,
       hasUser: !!user
     });
-    fetchStudentData();
-    const interval = setInterval(fetchStudentData, 30000); // Auto-refresh every 30 seconds
-    return () => clearInterval(interval);
-  }, [user]);
+    if (user?.id) {
+      fetchStudentData();
+      const interval = setInterval(fetchStudentData, 30000); // Auto-refresh every 30 seconds
+      return () => clearInterval(interval);
+    } else {
+      console.log('🎓 ModernStudentDashboard: No user ID, skipping data fetch');
+      setLoading(false);
+    }
+  }, [user?.id]); // Only depend on user.id, not the entire user object
 
   if (loading) {
     return <LoadingSkeleton variant="dashboard" />;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { resetAuth } from "@/utils/authCleanup";
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -29,6 +30,12 @@ export const useAuth = () => {
 
         console.log("👤 Profile data:", profile);
         console.log("❌ Profile error:", error);
+        if (error) {
+          console.error('Missing role, signing out', error);
+          await supabase.auth.signOut();
+          navigate('/login', { state: { error: 'missing-role' } });
+          return;
+        }
         const userRole = profile?.role;
         setRole(userRole);
         console.log("🎭 Role set to:", userRole);
@@ -58,6 +65,12 @@ export const useAuth = () => {
 
         console.log("👤 Auth change - Profile data:", profile);
         console.log("❌ Auth change - Profile error:", error);
+        if (error) {
+          console.error('Missing role, signing out', error);
+          await supabase.auth.signOut();
+          navigate('/login', { state: { error: 'missing-role' } });
+          return;
+        }
         const userRole = profile?.role;
         setRole(userRole);
         console.log("🎭 Auth change - Role set to:", userRole);
@@ -72,10 +85,16 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      console.log('🚪 useAuth: Starting comprehensive sign out...');
+      // Use comprehensive auth cleanup that handles all cached data
+      await resetAuth();
+      console.log('✅ useAuth: Sign out completed successfully');
       navigate("/login");
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error('❌ useAuth: Error during sign out:', error);
+      // Even if there's an error, ensure user is signed out and navigate to login
+      await supabase.auth.signOut();
+      navigate("/login");
     }
   };
 
