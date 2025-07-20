@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/sonner";
+import MembershipRenewal from "@/components/membership/MembershipRenewal";
 import {
   AlertCircle,
   Award,
@@ -133,6 +134,7 @@ const Membership = () => {
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [paymentNotes, setPaymentNotes] = useState<string>("");
+  const [showRenewalDialog, setShowRenewalDialog] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -658,7 +660,7 @@ const Membership = () => {
                     <Button
                       variant="outline"
                       className="flex-1"
-                      onClick={() => toast.info("Renewal feature coming soon")}
+                      onClick={() => setShowRenewalDialog(true)}
                     >
                       <Calendar className="h-4 w-4 mr-2" />
                       Renew
@@ -1049,6 +1051,17 @@ const Membership = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Membership Renewal Dialog */}
+      <MembershipRenewal
+        isOpen={showRenewalDialog}
+        onClose={() => setShowRenewalDialog(false)}
+        currentMembership={membership}
+        onRenewalSuccess={() => {
+          fetchMembershipData();
+          toast.success("Membership renewal submitted successfully!");
+        }}
+      />
     </div>
   );
 };

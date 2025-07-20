@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { EmailService } from "../email/email.service";
 
 export const EventService = {
   getAllEvents: async () => {
@@ -82,18 +83,34 @@ export const EventService = {
 
       if (existingRegistration) {
         console.log("User already registered, unregistering...");
+        console.log("Deleting registration with ID:", existingRegistration.id);
+
         // If registered, unregister
-        const { error } = await supabase
+        const { data: deletedData, error } = await supabase
           .from("event_registrations")
           .delete()
-          .eq("id", existingRegistration.id);
+          .eq("id", existingRegistration.id)
+          .select(); // Select to confirm deletion
 
         if (error) {
           console.error("Error unregistering:", error);
+          console.error("Error details:", {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint
+          });
+
+          // Handle specific error types
+          if (error.code === '42501' || error.message.includes('row-level security')) {
+            throw new Error("Permission denied. You may need to log out and log back in.");
+          }
+
           throw error;
         }
-        console.log("Successfully unregistered");
-        return null;
+
+        console.log("Successfully unregistered, deleted data:", deletedData);
+        return null; // null indicates unregistration
       } else {
         console.log("User not registered, registering...");
         // If not registered, register
@@ -134,6 +151,70 @@ export const EventService = {
       }
     } catch (error) {
       console.error("Registration process failed:", error);
+      throw error;
+    }
+  },
+
+  // Separate method for unregistering from events
+  unregisterFromEvent: async (eventId: string, userId: string) => {
+    try {
+      console.log("Unregistering user:", userId, "from event:", eventId);
+
+      // Find the registration to delete
+      const { data: registration, error: findError } = await supabase
+        .from("event_registrations")
+        .select("id")
+        .eq("event_id", eventId)
+        .eq("user_id", userId)
+        .single();
+
+      if (findError) {
+        if (findError.code === 'PGRST116') {
+          console.log("User is not registered for this event");
+          return { success: false, message: "You are not registered for this event" };
+        }
+        throw findError;
+      }
+
+      // Delete the registration
+      const { error: deleteError } = await supabase
+        .from("event_registrations")
+        .delete()
+        .eq("id", registration.id);
+
+      if (deleteError) {
+        console.error("Error deleting registration:", deleteError);
+        throw deleteError;
+      }
+
+      console.log("Successfully unregistered from event");
+      return { success: true, message: "Successfully unregistered from event" };
+    } catch (error) {
+      console.error("Unregistration failed:", error);
+      throw error;
+    }
+  },
+
+  // Check if user is registered for an event
+  checkRegistrationStatus: async (eventId: string, userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("event_registrations")
+        .select("id, registered_at, attended")
+        .eq("event_id", eventId)
+        .eq("user_id", userId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return { isRegistered: false, registration: null };
+        }
+        throw error;
+      }
+
+      return { isRegistered: true, registration: data };
+    } catch (error) {
+      console.error("Error checking registration status:", error);
       throw error;
     }
   },
@@ -345,6 +426,58 @@ export const EventService = {
             console.error("Error inserting notifications:", notifError);
           } else {
             console.log("Notifications sent successfully");
+          }
+
+          // Send email notifications to registered users
+          try {
+            console.log("Sending email notifications to registered users");
+
+            // Get user emails for email notifications
+            const { data: userProfiles, error: profileError } = await supabase
+              .from("profiles")
+              .select("id, first_name, last_name")
+              .in("id", registrations.map((reg: any) => reg.user_id));
+
+            if (profileError) {
+              console.error("Error fetching user profiles for emails:", profileError);
+            } else if (userProfiles) {
+              // Get auth users to get email addresses
+              const emailPromises = userProfiles.map(async (profile: any) => {
+                try {
+                  // Get user email from auth.users (admin only)
+                  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(profile.id);
+
+                  if (authError || !authUser.user?.email) {
+                    console.warn(`Could not get email for user ${profile.id}`);
+                    return null;
+                  }
+
+                  // Send email notification
+                  await EmailService.sendEventCancellationEmail(
+                    authUser.user.email,
+                    `${profile.first_name} ${profile.last_name}`,
+                    event.name,
+                    event.event_date,
+                    "Administrative decision" // Default reason
+                  );
+
+                  return { success: true, email: authUser.user.email };
+                } catch (emailError) {
+                  console.error(`Error sending email to user ${profile.id}:`, emailError);
+                  return { success: false, error: emailError };
+                }
+              });
+
+              const emailResults = await Promise.allSettled(emailPromises);
+              const successfulEmails = emailResults.filter(result =>
+                result.status === 'fulfilled' && result.value?.success
+              ).length;
+
+              console.log(`Email notifications sent: ${successfulEmails}/${userProfiles.length}`);
+            }
+          } catch (emailError) {
+            console.error("Error sending email notifications:", emailError);
+            // Don't throw error here, continue with deletion
           }
         } catch (notificationError) {
           console.error("Error creating notifications:", notificationError);

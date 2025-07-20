@@ -54,9 +54,12 @@ const Dashboard = () => {
         navigate("/dashboard/modern-staff", { replace: true });
       } else if (role === "student") {
         console.log("🔄 Dashboard: Auto-redirecting student to student dashboard");
+        console.log("🔄 Dashboard: Navigating to /dashboard/modern-student");
         navigate("/dashboard/modern-student", { replace: true });
+        console.log("🔄 Dashboard: Navigation completed");
       } else {
         console.log("⚠️ Dashboard: No role found, showing fallback dashboard");
+        console.log("⚠️ Dashboard: Role value:", role, "Type:", typeof role);
         setError("Unable to determine user role. Please contact support.");
       }
     } catch (error: any) {

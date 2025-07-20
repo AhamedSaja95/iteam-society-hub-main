@@ -50,7 +50,9 @@ const EventList: React.FC<EventListProps> = ({
         .from('events')
         .select(`
           *,
-          event_registrations(count)
+          event_registrations!left(
+            id
+          )
         `)
         .eq('status', 'active')
         .order('event_date', { ascending: true });
@@ -77,7 +79,7 @@ const EventList: React.FC<EventListProps> = ({
 
           return {
             ...event,
-            registrations_count: event.event_registrations?.[0]?.count || 0,
+            registrations_count: Array.isArray(event.event_registrations) ? event.event_registrations.length : 0,
             user_registered: userRegistered
           };
         })

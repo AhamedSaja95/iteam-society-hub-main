@@ -77,7 +77,16 @@ const ModernStudentDashboard = () => {
   });
 
   const fetchStudentData = async () => {
-    if (!user) return;
+    console.log('🎓 ModernStudentDashboard: fetchStudentData called', {
+      user: user,
+      userId: user?.id,
+      hasUser: !!user
+    });
+
+    if (!user) {
+      console.log('🎓 ModernStudentDashboard: No user, returning');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -265,6 +274,11 @@ const ModernStudentDashboard = () => {
   };
 
   useEffect(() => {
+    console.log('🎓 ModernStudentDashboard: useEffect triggered', {
+      user: user,
+      userId: user?.id,
+      hasUser: !!user
+    });
     fetchStudentData();
     const interval = setInterval(fetchStudentData, 30000); // Auto-refresh every 30 seconds
     return () => clearInterval(interval);

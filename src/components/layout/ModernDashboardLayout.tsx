@@ -44,12 +44,15 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useUser } from "@/hooks/useUser";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import AuthDebug from "@/components/debug/AuthDebug";
+import { useEmailNotifications } from "@/hooks/useEmailNotifications";
+import SearchBar from "@/components/search/SearchBar";
+import DashboardDataDebug from "@/components/debug/DashboardDataDebug";
 
 interface MenuItem {
   icon: React.ReactNode;
@@ -428,9 +431,12 @@ const ModernDashboardLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [notifications, setNotifications] = useState(0);
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { userProfile } = useUser();
   const location = useLocation();
+
+  // Initialize email notifications
+  useEmailNotifications();
 
   // Update time every minute
   useEffect(() => {
@@ -484,7 +490,7 @@ const ModernDashboardLayout = () => {
     return () => clearInterval(interval);
   }, [user]);
 
-  const userRole = userProfile?.role || "student";
+  const userRole = role || userProfile?.role || "student";
   const userName = userProfile
     ? `${userProfile.first_name} ${userProfile.last_name}`
     : "User";
@@ -640,13 +646,8 @@ const ModernDashboardLayout = () => {
 
             <div className="flex items-center gap-2 md:gap-4">
               {/* Search */}
-              <div className="relative hidden lg:block">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="h-9 w-64 rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+              <div className="hidden lg:block">
+                <SearchBar placeholder="Search events, users, notifications..." />
               </div>
 
               {/* Quick Actions */}
@@ -763,8 +764,13 @@ const ModernDashboardLayout = () => {
         </footer>
       </div>
 
-      {/* Debug component - only shows in development */}
-      {process.env.NODE_ENV === 'development' && <AuthDebug />}
+      {/* Debug components - only show in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <>
+          <AuthDebug />
+          <DashboardDataDebug />
+        </>
+      )}
     </div>
   );
 };

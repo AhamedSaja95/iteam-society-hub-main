@@ -10,6 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/sonner";
+import FileUpload from "@/components/ui/file-upload";
+import { StorageService } from "@/services/supabase/storage.service";
+import ImageCropper from "@/components/ui/image-cropper";
+import { createPreviewUrl } from "@/utils/imageUtils";
 import {
   User,
   Phone,
@@ -22,6 +26,7 @@ import {
   CreditCard,
   GraduationCap,
   Briefcase,
+  Camera,
 } from "lucide-react";
 import QRCode from "qrcode";
 
@@ -32,6 +37,7 @@ interface UserProfile {
   role: string;
   phone_number?: string;
   address?: string;
+  photo_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -72,6 +78,10 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [showCropper, setShowCropper] = useState(false);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string>("");
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -157,24 +167,204 @@ const Profile = () => {
     }
   };
 
+  // Test function to check storage service
+  const testStorageService = async () => {
+    try {
+      console.log("Testing storage service...");
+
+      // Create a simple test file
+      const canvas = document.createElement('canvas');
+      canvas.width = 100;
+      canvas.height = 100;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(0, 0, 100, 100);
+      }
+
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.8);
+      });
+
+      const testFile = new File([blob], 'test.jpg', { type: 'image/jpeg' });
+      console.log("Test file created:", testFile);
+
+      if (user?.id) {
+        const result = await StorageService.uploadProfilePhoto(user.id, testFile);
+        console.log("Storage test successful:", result);
+        toast.success("Storage test successful!");
+      }
+    } catch (error) {
+      console.error("Storage test failed:", error);
+      toast.error("Storage test failed: " + (error as Error).message);
+    }
+  };
+
+  const handleFileSelect = async (file: File) => {
+    try {
+      console.log("handleFileSelect: File selected:", {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
+
+      setOriginalFile(file);
+      const previewUrl = await createPreviewUrl(file);
+      console.log("handleFileSelect: Preview URL created:", previewUrl.substring(0, 50) + "...");
+
+      setImagePreviewUrl(previewUrl);
+      setShowCropper(true);
+      console.log("handleFileSelect: Cropper opened");
+    } catch (error) {
+      console.error("Error creating preview:", error);
+      toast.error("Failed to process image");
+    }
+  };
+
+  const handleCropComplete = async (croppedFile: File) => {
+    try {
+      console.log("Crop completed, file details:", {
+        name: croppedFile.name,
+        size: croppedFile.size,
+        type: croppedFile.type
+      });
+
+      // Validate the cropped file
+      if (!croppedFile || croppedFile.size === 0) {
+        throw new Error("Invalid cropped file");
+      }
+
+      setShowCropper(false);
+
+      // Automatically upload the cropped photo
+      if (!user?.id) {
+        toast.error("User not authenticated");
+        return;
+      }
+
+      setUploadingPhoto(true);
+      toast.info("Uploading profile photo...");
+
+      try {
+        // Upload photo to storage
+        const photoUrl = await StorageService.uploadProfilePhoto(user.id, croppedFile);
+        console.log("Photo uploaded successfully, URL:", photoUrl);
+
+        // Update profile in database
+        console.log("Updating profile in database with photo URL:", photoUrl);
+        const { data: updateData, error } = await supabase
+          .from('profiles')
+          .update({ photo_url: photoUrl })
+          .eq('id', user.id)
+          .select();
+
+        if (error) {
+          console.error("Database update error:", error);
+
+          // Check if it's a column missing error
+          if (error.message.includes('column') && error.message.includes('photo_url')) {
+            throw new Error('Database schema error: photo_url column missing from profiles table');
+          } else {
+            throw new Error(`Database update failed: ${error.message}`);
+          }
+        }
+
+        console.log("Database update successful:", updateData);
+
+        console.log("Profile updated successfully in database");
+
+        // Update local state immediately for instant UI update
+        // Add cache busting parameter to force image reload
+        const cacheBustedUrl = `${photoUrl}?t=${Date.now()}`;
+        setProfile(prev => prev ? { ...prev, photo_url: cacheBustedUrl } : null);
+
+        toast.success("Profile photo updated successfully!");
+      } catch (uploadError) {
+        console.error("Error uploading photo:", uploadError);
+
+        // Provide specific error messages
+        if (uploadError instanceof Error) {
+          if (uploadError.message.includes('storage')) {
+            toast.error("Failed to upload photo to storage. Please try again.");
+          } else if (uploadError.message.includes('profiles')) {
+            toast.error("Failed to update profile. Please try again.");
+          } else {
+            toast.error(`Upload failed: ${uploadError.message}`);
+          }
+        } else {
+          toast.error("Failed to upload profile photo. Please try again.");
+        }
+      } finally {
+        setUploadingPhoto(false);
+      }
+
+    } catch (error) {
+      console.error("Error processing cropped image:", error);
+      toast.error("Failed to process cropped image");
+      setShowCropper(false);
+    }
+  };
+
+  const validateProfile = (profile: UserProfile) => {
+    const errors: string[] = [];
+
+    // Required field validation
+    if (!profile.first_name?.trim()) {
+      errors.push("First name is required");
+    }
+    if (!profile.last_name?.trim()) {
+      errors.push("Last name is required");
+    }
+
+    // Name format validation
+    if (profile.first_name && !/^[a-zA-Z\s'-]+$/.test(profile.first_name.trim())) {
+      errors.push("First name can only contain letters, spaces, hyphens, and apostrophes");
+    }
+    if (profile.last_name && !/^[a-zA-Z\s'-]+$/.test(profile.last_name.trim())) {
+      errors.push("Last name can only contain letters, spaces, hyphens, and apostrophes");
+    }
+
+
+    // Address validation (if provided)
+    if (profile.address && profile.address.trim().length < 5) {
+      errors.push("Address must be at least 5 characters long");
+    }
+
+    return errors;
+  };
+
   const handleSaveProfile = async () => {
     if (!profile) return;
 
     try {
       setSaving(true);
 
+      // Validate profile data
+      const validationErrors = validateProfile(profile);
+      if (validationErrors.length > 0) {
+        toast.error(validationErrors[0]); // Show first error
+        setSaving(false);
+        return;
+      }
+
+      // Trim whitespace from string fields
+      const cleanedProfile = {
+        first_name: profile.first_name?.trim(),
+        last_name: profile.last_name?.trim(),
+        phone_number: profile.phone_number?.trim() || null,
+        address: profile.address?.trim() || null,
+        updated_at: new Date().toISOString(),
+      };
+
       const { error } = await supabase
         .from("profiles")
-        .update({
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          phone_number: profile.phone_number,
-          address: profile.address,
-          updated_at: new Date().toISOString(),
-        })
+        .update(cleanedProfile)
         .eq("id", user?.id);
 
       if (error) throw error;
+
+      // Update local state with cleaned data
+      setProfile(prev => prev ? { ...prev, ...cleanedProfile } : null);
 
       toast.success("Profile updated successfully");
       setIsEditing(false);
@@ -232,9 +422,10 @@ const Profile = () => {
     qrImg.onload = () => {
       ctx.drawImage(qrImg, canvas.width - 180, 100, 150, 150);
 
-      // Download the image
+      // Download the image with member's name
       const link = document.createElement("a");
-      link.download = `I-Team-EID-${membership.eid}.png`;
+      const memberName = `${profile.first_name || 'Member'}_${profile.last_name || 'Name'}`.replace(/\s+/g, '_');
+      link.download = `I-Team-EID-${memberName}-${membership.eid}.png`;
       link.href = canvas.toDataURL();
       link.click();
 
@@ -294,13 +485,23 @@ const Profile = () => {
       <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl p-6 text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Avatar className="h-16 w-16 border-4 border-white/20">
-              <AvatarImage src="" />
-              <AvatarFallback className="bg-white/20 text-white text-xl">
-                {profile.first_name?.[0]}
-                {profile.last_name?.[0]}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-16 w-16 border-4 border-white/20">
+                <AvatarImage
+                  src={profile.photo_url || ""}
+                  key={profile.photo_url} // Force re-render when URL changes
+                />
+                <AvatarFallback className="bg-white/20 text-white text-xl">
+                  {profile.first_name?.[0]}
+                  {profile.last_name?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              {isEditing && (
+                <div className="absolute -bottom-1 -right-1 bg-iteam-primary rounded-full p-1.5 border-2 border-white">
+                  <Camera className="h-3 w-3 text-white" />
+                </div>
+              )}
+            </div>
             <div>
               <h1 className="text-2xl font-bold">
                 {profile.first_name} {profile.last_name}
@@ -361,6 +562,54 @@ const Profile = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Profile Photo Upload Section */}
+              {isEditing && (
+                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage
+                        src={profile.photo_url || ""}
+                        key={profile.photo_url} // Force re-render when URL changes
+                      />
+                      <AvatarFallback className="text-lg">
+                        {profile.first_name?.[0]}
+                        {profile.last_name?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900 mb-2">Profile Photo</h4>
+                      <FileUpload
+                        label="Upload New Photo"
+                        accept="image/*"
+                        maxSize={10}
+                        onFileSelect={handleFileSelect}
+                        preview={true}
+                        currentFile={profile.photo_url || undefined}
+                      />
+                      {uploadingPhoto && (
+                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                          <p className="text-sm text-blue-700">
+                            📤 Uploading profile photo...
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Debug: Test Storage Button */}
+                      <div className="mt-2">
+                        <Button
+                          onClick={testStorageService}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          🧪 Test Storage
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="first_name">First Name</Label>
@@ -371,6 +620,10 @@ const Profile = () => {
                       onChange={(e) =>
                         setProfile({ ...profile, first_name: e.target.value })
                       }
+                      required
+                      pattern="[a-zA-Z\s'-]+"
+                      title="First name can only contain letters, spaces, hyphens, and apostrophes"
+                      maxLength={50}
                     />
                   ) : (
                     <p className="mt-1 text-sm text-gray-900">
@@ -387,6 +640,10 @@ const Profile = () => {
                       onChange={(e) =>
                         setProfile({ ...profile, last_name: e.target.value })
                       }
+                      required
+                      pattern="[a-zA-Z\s'-]+"
+                      title="Last name can only contain letters, spaces, hyphens, and apostrophes"
+                      maxLength={50}
                     />
                   ) : (
                     <p className="mt-1 text-sm text-gray-900">
@@ -401,11 +658,13 @@ const Profile = () => {
                 {isEditing ? (
                   <Input
                     id="phone"
+                    type="tel"
                     value={profile.phone_number || ""}
                     onChange={(e) =>
                       setProfile({ ...profile, phone_number: e.target.value })
                     }
-                    placeholder="Enter your phone number"
+                    placeholder="Enter your phone number (e.g., +1234567890)"
+                    maxLength={20}
                   />
                 ) : (
                   <p className="mt-1 text-sm text-gray-900 flex items-center gap-2">
@@ -424,8 +683,10 @@ const Profile = () => {
                     onChange={(e) =>
                       setProfile({ ...profile, address: e.target.value })
                     }
-                    placeholder="Enter your address"
+                    placeholder="Enter your full address (minimum 5 characters)"
                     rows={3}
+                    minLength={5}
+                    maxLength={200}
                   />
                 ) : (
                   <p className="mt-1 text-sm text-gray-900 flex items-center gap-2">
@@ -631,6 +892,14 @@ const Profile = () => {
           )}
         </div>
       </div>
+
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        isOpen={showCropper}
+        onClose={() => setShowCropper(false)}
+        imageSrc={imagePreviewUrl}
+        onCropComplete={handleCropComplete}
+      />
     </div>
   );
 };

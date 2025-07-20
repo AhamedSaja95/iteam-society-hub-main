@@ -80,6 +80,18 @@ const MembershipApproval: React.FC = () => {
 
   const approveMembership = async (membershipId: string, userId: string) => {
     try {
+      // Check if membership is already approved to prevent duplicate operations
+      const { data: existingMembership } = await supabase
+        .from('memberships')
+        .select('status')
+        .eq('id', membershipId)
+        .single();
+
+      if (existingMembership?.status === 'active') {
+        toast.info('Membership is already approved');
+        return;
+      }
+
       // Generate E-ID
       const eid = await EIDService.generateEID(userId, 'student');
       
@@ -92,9 +104,15 @@ const MembershipApproval: React.FC = () => {
           start_date: new Date().toISOString(),
           end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year from now
         })
-        .eq('id', membershipId);
+        .eq('id', membershipId)
+        .eq('status', 'pending_approval'); // Only update if still pending
 
-      if (membershipError) throw membershipError;
+      if (membershipError) {
+        if (membershipError.code === '23505') {
+          throw new Error('This user already has an active membership');
+        }
+        throw membershipError;
+      }
 
       // Update payment status
       const { error: paymentError } = await supabase
@@ -129,11 +147,24 @@ const MembershipApproval: React.FC = () => {
 
   const rejectMembership = async (membershipId: string, userId: string) => {
     try {
+      // Check if membership is already processed
+      const { data: existingMembership } = await supabase
+        .from('memberships')
+        .select('status')
+        .eq('id', membershipId)
+        .single();
+
+      if (existingMembership?.status !== 'pending_approval') {
+        toast.info('Membership has already been processed');
+        return;
+      }
+
       // Update membership status
       const { error: membershipError } = await supabase
         .from('memberships')
         .update({ status: 'rejected' })
-        .eq('id', membershipId);
+        .eq('id', membershipId)
+        .eq('status', 'pending_approval'); // Only update if still pending
 
       if (membershipError) throw membershipError;
 

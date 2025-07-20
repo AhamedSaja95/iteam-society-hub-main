@@ -274,11 +274,15 @@ const RegisterAdmin = () => {
                     <Label htmlFor="phone">Phone Number *</Label>
                     <Input
                       id="phone"
-                      placeholder="Enter your phone number"
+                      type="tel"
+                      placeholder="Enter your phone number (any format)"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       required
                     />
+                    <p className="text-xs text-gray-500">
+                      Enter in any format (e.g., +94712345678, 071-234-5678)
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address *</Label>

@@ -34,6 +34,10 @@ import RegisterAdmin from "./pages/RegisterAdmin";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Unauthorized from "./pages/Unauthorized";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import SearchResults from "./pages/dashboard/SearchResults";
+import "./utils/env-test";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +59,8 @@ const App = () => (
             <Route path="/register-admin" element={<RegisterAdmin />} />
             <Route path="/member/:eid" element={<MemberProfile />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Protected Dashboard Routes */}
             <Route element={<ProtectedRoute />}>
@@ -68,6 +74,7 @@ const App = () => (
                 <Route path="membership" element={<Membership />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="achievements" element={<Achievements />} />
+                <Route path="search" element={<SearchResults />} />
 
                 {/* Role-specific dashboards */}
                 <Route

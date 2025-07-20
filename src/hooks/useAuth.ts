@@ -29,8 +29,10 @@ export const useAuth = () => {
 
         console.log("👤 Profile data:", profile);
         console.log("❌ Profile error:", error);
-        setRole(profile?.role);
-        console.log("🎭 Role set to:", profile?.role);
+        const userRole = profile?.role;
+        setRole(userRole);
+        console.log("🎭 Role set to:", userRole);
+        console.log("🔍 useAuth state after role set:", { user: session.user.id, role: userRole });
       }
     };
 
@@ -56,8 +58,10 @@ export const useAuth = () => {
 
         console.log("👤 Auth change - Profile data:", profile);
         console.log("❌ Auth change - Profile error:", error);
-        setRole(profile?.role);
-        console.log("🎭 Auth change - Role set to:", profile?.role);
+        const userRole = profile?.role;
+        setRole(userRole);
+        console.log("🎭 Auth change - Role set to:", userRole);
+        console.log("🔍 useAuth auth change state:", { user: session.user.id, role: userRole });
       } else {
         setRole(null);
       }

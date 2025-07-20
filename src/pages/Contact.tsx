@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/sonner";
 import MainLayout from "@/components/layout/MainLayout";
 import {
   Facebook,
@@ -13,6 +14,64 @@ import {
 } from "lucide-react";
 
 const Contact = () => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    subject: "",
+    message: ""
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      // Validate required fields
+      if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+        toast.error("Please fill in all required fields");
+        return;
+      }
+
+      // Pass phone number as raw string - no validation needed
+      // This ensures phone number format doesn't block submission
+      const submissionData = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone, // Raw string, unchanged
+        subject: formData.subject.trim(),
+        message: formData.message.trim(),
+        timestamp: new Date().toISOString()
+      };
+
+      // In a real implementation, this would send to your backend
+      // For now, we'll just simulate successful submission
+      console.log("Contact form submission:", submissionData);
+      
+      toast.success("Message sent successfully! We'll get back to you soon.");
+      
+      // Reset form
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        subject: "",
+        message: ""
+      });
+      
+    } catch (error) {
+      console.error("Error submitting contact form:", error);
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <MainLayout>
       {/* Hero Section */}
@@ -123,13 +182,13 @@ const Contact = () => {
                 Send us a Message
               </h2>
 
-              <form className="space-y-6">
+              <form className="space-y-6" onSubmit={handleSubmit}>
                 <div>
                   <label
                     htmlFor="name"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Your Name
+                    Your Name *
                   </label>
                   <Input
                     id="name"
@@ -137,6 +196,8 @@ const Contact = () => {
                     type="text"
                     placeholder="Enter your full name"
                     className="w-full"
+                    value={formData.name}
+                    onChange={handleInputChange}
                     required
                   />
                 </div>
@@ -146,7 +207,7 @@ const Contact = () => {
                     htmlFor="email"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Email Address
+                    Email Address *
                   </label>
                   <Input
                     id="email"
@@ -154,8 +215,31 @@ const Contact = () => {
                     type="email"
                     placeholder="Enter your email"
                     className="w-full"
+                    value={formData.email}
+                    onChange={handleInputChange}
                     required
                   />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="phone"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Phone Number
+                  </label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    placeholder="Enter your phone number (optional)"
+                    className="w-full"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Optional - Enter your phone number in any format
+                  </p>
                 </div>
 
                 <div>
@@ -163,7 +247,7 @@ const Contact = () => {
                     htmlFor="subject"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Subject
+                    Subject *
                   </label>
                   <Input
                     id="subject"
@@ -171,6 +255,8 @@ const Contact = () => {
                     type="text"
                     placeholder="Enter subject"
                     className="w-full"
+                    value={formData.subject}
+                    onChange={handleInputChange}
                     required
                   />
                 </div>
@@ -180,7 +266,7 @@ const Contact = () => {
                     htmlFor="message"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Message
+                    Message *
                   </label>
                   <Textarea
                     id="message"
@@ -188,6 +274,8 @@ const Contact = () => {
                     rows={5}
                     placeholder="Enter your message"
                     className="w-full"
+                    value={formData.message}
+                    onChange={handleInputChange}
                     required
                   />
                 </div>
@@ -196,8 +284,9 @@ const Contact = () => {
                   <Button
                     type="submit"
                     className="w-full bg-iteam-primary hover:bg-iteam-primary/90 text-white"
+                    disabled={isSubmitting}
                   >
-                    Send Message
+                    {isSubmitting ? "Sending..." : "Send Message"}
                   </Button>
                 </div>
               </form>

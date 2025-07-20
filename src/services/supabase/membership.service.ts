@@ -162,5 +162,145 @@ export const MembershipService = {
       console.error("Payment creation failed:", error);
       throw error;
     }
+  },
+
+  // Renew membership
+  renewMembership: async (userId: string, tier: string, paymentMethod: string) => {
+    try {
+      console.log("Renewing membership for user:", userId);
+
+      // Get current membership
+      const currentMembership = await MembershipService.getCurrentMembership(userId);
+
+      if (!currentMembership) {
+        throw new Error("No current membership found");
+      }
+
+      // Calculate new dates (extend by 1 year from current end date or today, whichever is later)
+      const currentEndDate = new Date(currentMembership.end_date);
+      const today = new Date();
+      const startDate = currentEndDate > today ? currentEndDate : today;
+      const endDate = new Date(startDate);
+      endDate.setFullYear(endDate.getFullYear() + 1);
+
+      // Calculate amount based on tier
+      const tierPricing = {
+        bronze: 2500,
+        silver: 5000,
+        gold: 10000
+      };
+      const amount = tierPricing[tier as keyof typeof tierPricing] || 2500;
+
+      // Create renewal record
+      const renewalData = {
+        user_id: userId,
+        tier,
+        status: 'pending_payment',
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+        amount,
+        eid: currentMembership.eid, // Keep the same E-ID
+        payment_method: paymentMethod,
+        is_renewal: true
+      };
+
+      const { data, error } = await supabase
+        .from('memberships')
+        .insert(renewalData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log("Membership renewal created:", data);
+      return data;
+    } catch (error) {
+      console.error("Error renewing membership:", error);
+      throw error;
+    }
+  },
+
+  // Get membership renewal options
+  getRenewalOptions: (currentTier: string) => {
+    const tiers = [
+      {
+        id: 'bronze',
+        name: 'Bronze',
+        price: 2500,
+        duration: '1 Year',
+        features: [
+          'Access to all events',
+          'Basic networking opportunities',
+          'Digital E-ID card',
+          'Monthly newsletter'
+        ],
+        color: 'from-amber-500 to-orange-600',
+        popular: false
+      },
+      {
+        id: 'silver',
+        name: 'Silver',
+        price: 5000,
+        duration: '1 Year',
+        features: [
+          'All Bronze benefits',
+          'Priority event registration',
+          'Exclusive workshops',
+          'Career guidance sessions',
+          'Industry mentorship program'
+        ],
+        color: 'from-gray-400 to-gray-600',
+        popular: true
+      },
+      {
+        id: 'gold',
+        name: 'Gold',
+        price: 10000,
+        duration: '1 Year',
+        features: [
+          'All Silver benefits',
+          'VIP event access',
+          'One-on-one career counseling',
+          'Industry placement assistance',
+          'Leadership development program',
+          'Alumni network access'
+        ],
+        color: 'from-yellow-400 to-yellow-600',
+        popular: false
+      }
+    ];
+
+    return tiers;
+  },
+
+  // Check if membership is eligible for renewal
+  isEligibleForRenewal: (membership: any) => {
+    if (!membership) return false;
+
+    const endDate = new Date(membership.end_date);
+    const today = new Date();
+    const daysUntilExpiry = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Allow renewal if membership expires within 60 days or has already expired
+    return daysUntilExpiry <= 60;
+  },
+
+  // Get renewal status message
+  getRenewalStatusMessage: (membership: any) => {
+    if (!membership) return "No active membership found";
+
+    const endDate = new Date(membership.end_date);
+    const today = new Date();
+    const daysUntilExpiry = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysUntilExpiry < 0) {
+      return `Your membership expired ${Math.abs(daysUntilExpiry)} days ago`;
+    } else if (daysUntilExpiry <= 30) {
+      return `Your membership expires in ${daysUntilExpiry} days`;
+    } else if (daysUntilExpiry <= 60) {
+      return `Your membership expires in ${daysUntilExpiry} days - renewal available`;
+    } else {
+      return `Your membership is active until ${endDate.toLocaleDateString()}`;
+    }
   }
 };

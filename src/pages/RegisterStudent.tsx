@@ -217,7 +217,17 @@ const RegisterStudent = () => {
       }
     } catch (error: any) {
       console.error("Error registering:", error);
-      setError(error.message || "An error occurred during registration");
+
+      // Handle specific error cases
+      if (error.message.includes("User already registered")) {
+        setError("This email is already registered. Please use a different email or try logging in instead.");
+      } else if (error.message.includes("Invalid email")) {
+        setError("Please enter a valid email address.");
+      } else if (error.message.includes("Password")) {
+        setError("Password must be at least 6 characters long.");
+      } else {
+        setError(error.message || "An error occurred during registration");
+      }
     } finally {
       setLoading(false);
     }
@@ -280,11 +290,15 @@ const RegisterStudent = () => {
                       <Label htmlFor="phone">Phone Number *</Label>
                       <Input
                         id="phone"
-                        placeholder="Enter your phone number"
+                        type="tel"
+                        placeholder="Enter your phone number (any format)"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         required
                       />
+                      <p className="text-xs text-gray-500">
+                        Enter in any format (e.g., +94712345678, 071-234-5678)
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email Address *</Label>

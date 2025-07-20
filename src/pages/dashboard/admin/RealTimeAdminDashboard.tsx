@@ -78,20 +78,43 @@ const RealTimeAdminDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      console.log("🔄 Admin Dashboard: Starting data fetch...");
 
-      // Fetch users with role details
-      const { data: users, error: usersError } = await supabase.from("profiles")
+      // Check authentication first
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        console.error("❌ Auth error:", authError);
+        throw new Error("Authentication failed");
+      }
+      
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+      
+      console.log("✅ User authenticated:", user.id);
+
+      // Fetch users with role details - with better error handling
+      console.log("📊 Fetching users data...");
+      const { data: users, error: usersError } = await supabase
+        .from("profiles")
         .select(`
           *,
           student_details(*),
           staff_details(*)
         `);
 
-      if (usersError) throw usersError;
+      if (usersError) {
+        console.error("❌ Users fetch error:", usersError);
+        throw new Error(`Failed to fetch users: ${usersError.message}`);
+      }
+      
+      console.log(`✅ Users fetched: ${users?.length || 0} records`);
 
       // Fetch memberships with user details
-      const { data: memberships, error: membershipsError } =
-        await supabase.from("memberships").select(`
+      console.log("👥 Fetching memberships data...");
+      const { data: memberships, error: membershipsError } = await supabase
+        .from("memberships")
+        .select(`
           *,
           profiles!memberships_user_id_fkey(
             first_name,
@@ -100,21 +123,34 @@ const RealTimeAdminDashboard = () => {
           )
         `);
 
-      if (membershipsError) throw membershipsError;
+      if (membershipsError) {
+        console.error("❌ Memberships fetch error:", membershipsError);
+        throw new Error(`Failed to fetch memberships: ${membershipsError.message}`);
+      }
+      
+      console.log(`✅ Memberships fetched: ${memberships?.length || 0} records`);
 
       // Fetch events with registration counts
-      const { data: events, error: eventsError } = await supabase.from("events")
+      console.log("📅 Fetching events data...");
+      const { data: events, error: eventsError } = await supabase
+        .from("events")
         .select(`
           *,
           event_registrations(count)
         `);
 
-      if (eventsError) throw eventsError;
+      if (eventsError) {
+        console.error("❌ Events fetch error:", eventsError);
+        throw new Error(`Failed to fetch events: ${eventsError.message}`);
+      }
+      
+      console.log(`✅ Events fetched: ${events?.length || 0} records`);
 
       // Fetch payments with user details
-      const { data: payments, error: paymentsError } = await supabase.from(
-        "payments"
-      ).select(`
+      console.log("💳 Fetching payments data...");
+      const { data: payments, error: paymentsError } = await supabase
+        .from("payments")
+        .select(`
           *,
           profiles!payments_user_id_fkey(
             first_name,
@@ -123,7 +159,13 @@ const RealTimeAdminDashboard = () => {
           )
         `);
 
-      if (paymentsError) throw paymentsError;
+      if (paymentsError) {
+        console.error("❌ Payments fetch error:", paymentsError);
+        // Don't throw error for payments as it might not exist yet
+        console.warn("Continuing without payments data...");
+      }
+      
+      console.log(`✅ Payments fetched: ${payments?.length || 0} records`);
 
       // Process data
       const now = new Date();

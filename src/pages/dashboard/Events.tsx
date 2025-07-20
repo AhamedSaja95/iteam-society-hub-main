@@ -45,6 +45,7 @@ const Events = () => {
   const [bannerImage, setBannerImage] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [processingEventId, setProcessingEventId] = useState<string | null>(null);
 
   // Fetch events with proper error handling
   const { data: events = [], isLoading } = useQuery({
@@ -72,15 +73,32 @@ const Events = () => {
         console.log("Registration mutation started for event:", eventId);
         console.log("Current user:", user);
 
+        // Set processing state
+        setProcessingEventId(eventId);
+
         if (!user?.id) {
           console.error("User not authenticated:", user);
           throw new Error("User not authenticated");
         }
 
+        // Find current registration status before making the call
+        const currentEvent = events.find(e => e.id === eventId);
+        const isCurrentlyRegistered = currentEvent?.event_registrations?.some(
+          (reg) => reg.user_id === user.id
+        );
+
+        console.log("Current registration status:", isCurrentlyRegistered);
         console.log("Calling EventService.registerForEvent with:", { eventId, userId: user.id });
+
         const result = await EventService.registerForEvent(eventId, user.id);
         console.log("Registration result:", result);
-        return result;
+
+        // Return both the result and the action taken for better feedback
+        return {
+          result,
+          action: isCurrentlyRegistered ? 'unregistered' : 'registered',
+          eventId
+        };
       } catch (error) {
         console.error("Event registration error:", error);
         throw error;
@@ -88,15 +106,30 @@ const Events = () => {
     },
     onSuccess: (data) => {
       console.log("Registration mutation successful:", data);
+
+      // Clear processing state
+      setProcessingEventId(null);
+
+      // Force refresh the events data
       queryClient.invalidateQueries({ queryKey: ["events"] });
-      if (data) {
+
+      // Also refetch immediately to ensure UI updates
+      queryClient.refetchQueries({ queryKey: ["events"] });
+
+      if (data.action === 'registered') {
         toast.success("Successfully registered for event");
       } else {
-        toast.success("Successfully unregistered from event");
+        toast.success("Successfully cancelled registration");
       }
     },
     onError: (error: any) => {
       console.error("Registration failed:", error);
+
+      // Clear processing state
+      setProcessingEventId(null);
+
+      // Force refresh even on error to ensure UI is in sync
+      queryClient.invalidateQueries({ queryKey: ["events"] });
 
       // Provide more specific error messages
       if (error.message.includes("row-level security")) {
@@ -104,8 +137,12 @@ const Events = () => {
       } else if (error.message.includes("User not authenticated")) {
         toast.error("Please log in to register for events");
       } else {
-        toast.error(error.message || "Failed to register for event");
+        toast.error(error.message || "Failed to update registration");
       }
+    },
+    onSettled: () => {
+      // Always clear processing state when mutation settles
+      setProcessingEventId(null);
     },
   });
 
@@ -596,10 +633,12 @@ const Events = () => {
                     <Button
                       className="w-full"
                       variant={isRegistered ? "outline" : "default"}
-                      disabled={isFull || registerMutation.isLoading}
+                      disabled={isFull || processingEventId === event.id}
                       onClick={() => registerMutation.mutate(event.id)}
                     >
-                      {isRegistered
+                      {processingEventId === event.id
+                        ? (isRegistered ? "Cancelling..." : "Registering...")
+                        : isRegistered
                         ? "Cancel Registration"
                         : isFull
                         ? "Event Full"
@@ -678,9 +717,10 @@ const Events = () => {
                     <Button
                       variant="outline"
                       className="w-full"
+                      disabled={processingEventId === event.id}
                       onClick={() => registerMutation.mutate(event.id)}
                     >
-                      Cancel Registration
+                      {processingEventId === event.id ? "Cancelling..." : "Cancel Registration"}
                     </Button>
                   </CardFooter>
                 </Card>
